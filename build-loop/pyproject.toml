@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spectre-build"
+version = "1.0.0"
+description = "Automated task execution CLI for Claude Code"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.0",
+]
+
+[project.scripts]
+spectre-build = "cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]

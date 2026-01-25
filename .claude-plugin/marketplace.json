@@ -1,0 +1,21 @@
+{
+  "name": "spectre-labs",
+  "version": "1.0.0",
+  "owner": {
+    "name": "Joe Fernandez",
+    "email": "joe@subspace.build"
+  },
+  "metadata": {
+    "description": "Experimental features for SPECTRE workflow framework.",
+    "homepage": "https://github.com/Codename-Inc/spectre-labs"
+  },
+  "plugins": [
+    {
+      "name": "sparks",
+      "source": "./sparks",
+      "description": "Knowledge capture and recall. Use /sparks:learn to save learnings, they'll be automatically recalled when relevant.",
+      "version": "3.5.10",
+      "keywords": ["knowledge", "learning", "memory", "context"]
+    }
+  ]
+}
