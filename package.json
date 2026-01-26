@@ -1,5 +1,8 @@
 {
   "name": "spectre-labs",
   "type": "module",
-  "private": true
+  "private": true,
+  "scripts": {
+    "release": "node scripts/release.js"
+  }
 }
