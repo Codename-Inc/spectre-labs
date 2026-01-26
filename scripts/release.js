@@ -180,7 +180,8 @@ async function main() {
       writeJSON(SPARKS_PLUGIN_PATH, sparksPlugin);
       console.log(`  ✓ sparks/.claude-plugin/plugin.json → ${comp.newVersion}`);
 
-      // Update marketplace.json
+      // Update marketplace.json (both top-level version and plugin entry version)
+      sparksMarketplace.version = comp.newVersion;
       const marketplacePlugin = sparksMarketplace.plugins.find((p) => p.name === 'sparks');
       if (marketplacePlugin) {
         marketplacePlugin.version = comp.newVersion;

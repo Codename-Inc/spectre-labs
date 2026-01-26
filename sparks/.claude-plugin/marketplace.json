@@ -1,5 +1,6 @@
 {
   "name": "spectre-labs",
+  "version": "3.5.11",
   "owner": {
     "name": "Joe Fernandez",
     "email": "joe@subspace.build"
