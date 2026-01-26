@@ -20,7 +20,7 @@ Knowledge capture plugin for Claude Code. Capture learnings from conversations a
 
 ```bash
 # Add marketplace and install plugin
-/plugin marketplace add Codename-Inc/spectre-labs/sparks
+/plugin marketplace add Codename-Inc/spectre-labs
 /plugin install sparks@spectre-labs
 ```
 

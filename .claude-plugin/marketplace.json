@@ -12,7 +12,7 @@
   "plugins": [
     {
       "name": "sparks",
-      "source": ".",
+      "source": "./sparks",
       "description": "Knowledge capture and recall. Use /learn to save learnings, they'll be automatically recalled when relevant.",
       "version": "3.5.12"
     }

@@ -20,7 +20,7 @@ const ROOT = join(__dirname, '..');
 
 // Component paths
 const SPARKS_PLUGIN_PATH = join(ROOT, 'sparks/.claude-plugin/plugin.json');
-const SPARKS_MARKETPLACE_PATH = join(ROOT, 'sparks/.claude-plugin/marketplace.json');
+const SPARKS_MARKETPLACE_PATH = join(ROOT, '.claude-plugin/marketplace.json');
 const BUILD_LOOP_PYPROJECT_PATH = join(ROOT, 'build-loop/pyproject.toml');
 
 const rl = createInterface({

@@ -42,7 +42,7 @@ spectre-build --help
 ### Sparks Plugin Installation
 
 ```bash
-/plugin marketplace add Codename-Inc/spectre-labs/sparks
+/plugin marketplace add Codename-Inc/spectre-labs
 /plugin install sparks@spectre-labs
 ```
 
@@ -65,7 +65,7 @@ node scripts/release.js
 
 Updates versions in:
 - `sparks/.claude-plugin/plugin.json`
-- `sparks/.claude-plugin/marketplace.json`
+- `.claude-plugin/marketplace.json`
 - `build-loop/pyproject.toml`
 
 ## Architecture
