@@ -46,7 +46,7 @@ spectre-build --help
 /plugin install sparks@spectre-labs
 ```
 
-### Development (no test framework configured yet)
+### Development
 
 ```bash
 # Run directly without installing
@@ -55,6 +55,18 @@ python -m build_loop.cli --help
 # Install in editable mode
 pip install -e build-loop/
 ```
+
+### Release
+
+```bash
+# Interactive release script - bumps versions, commits, tags, pushes
+node scripts/release.js
+```
+
+Updates versions in:
+- `sparks/.claude-plugin/plugin.json`
+- `sparks/.claude-plugin/marketplace.json`
+- `build-loop/pyproject.toml`
 
 ## Architecture
 
@@ -127,15 +139,17 @@ Sessions stored in `.spectre/build-session.json`:
 
 ```
 sparks/
-├── plugin.json              # Plugin manifest
-├── commands/                # User-invocable commands
-│   ├── learn.md            # /learn entry point
-│   └── find.md             # /find entry point
-├── hooks/hooks.json        # SessionStart hooks
+├── .claude-plugin/
+│   ├── plugin.json         # Plugin manifest
+│   └── marketplace.json    # Marketplace catalog
+├── commands/               # User-invocable commands
+│   ├── learn.md           # /learn entry point
+│   └── find.md            # /find entry point
+├── hooks/hooks.json       # SessionStart hooks
 └── skills/
-    ├── sparks-learn/       # Knowledge capture skill
-    ├── sparks-apply/       # Auto-loaded at session start
-    └── sparks-find/        # Registry generation
+    ├── sparks-learn/      # Knowledge capture skill
+    ├── sparks-apply/      # Auto-loaded at session start
+    └── sparks-find/       # Registry generation
 ```
 
 Knowledge stored in `{{project_root}}/.claude/skills/` with registry at `sparks-find/references/registry.toon` (format: `skill-name|category|triggers|description`).
