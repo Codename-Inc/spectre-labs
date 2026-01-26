@@ -1,6 +1,6 @@
 {
   "name": "spectre-labs",
-  "version": "3.5.11",
+  "version": "3.5.12",
   "owner": {
     "name": "Joe Fernandez",
     "email": "joe@subspace.build"
@@ -14,7 +14,7 @@
       "name": "sparks",
       "source": ".",
       "description": "Knowledge capture and recall. Use /learn to save learnings, they'll be automatically recalled when relevant.",
-      "version": "3.5.11"
+      "version": "3.5.12"
     }
   ]
 }

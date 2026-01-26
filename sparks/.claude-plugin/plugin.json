@@ -1,6 +1,6 @@
 {
   "name": "sparks",
-  "version": "3.5.11",
+  "version": "3.5.12",
   "description": "Knowledge capture and recall. Use /learn to save learnings, they'll be automatically recalled when relevant.",
   "keywords": [
     "knowledge",
