@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .loop import run_build_loop
-from ..notify import notify_build_complete, notify_build_error
+from .notify import notify_build_complete, notify_build_error
 
 # Session file location
 SESSION_FILE = ".spectre/build-session.json"

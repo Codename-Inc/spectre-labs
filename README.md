@@ -19,9 +19,9 @@ spectre-build --tasks tasks.md --max-iterations 10
 Knowledge capture plugin for Claude Code. Capture learnings from conversations and automatically recall them when relevant.
 
 ```bash
-# Install as CC plugin
-/plugin marketplace add Codename-Inc/spectre-labs
-/plugin install sparks@codename
+# Add marketplace and install plugin
+/plugin marketplace add Codename-Inc/spectre-labs/sparks
+/plugin install sparks@spectre-labs
 ```
 
 ## Why Separate?

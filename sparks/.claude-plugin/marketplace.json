@@ -1,6 +1,5 @@
 {
   "name": "spectre-labs",
-  "version": "1.0.0",
   "owner": {
     "name": "Joe Fernandez",
     "email": "joe@subspace.build"
@@ -12,10 +11,9 @@
   "plugins": [
     {
       "name": "sparks",
-      "source": "./sparks",
-      "description": "Knowledge capture and recall. Use /sparks:learn to save learnings, they'll be automatically recalled when relevant.",
-      "version": "3.5.10",
-      "keywords": ["knowledge", "learning", "memory", "context"]
+      "source": ".",
+      "description": "Knowledge capture and recall. Use /learn to save learnings, they'll be automatically recalled when relevant.",
+      "version": "3.5.10"
     }
   ]
 }
