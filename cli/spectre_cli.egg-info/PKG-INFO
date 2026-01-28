@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: spectre-cli
+Version: 0.1.0
+Summary: Spectre CLI - Unified CLI with build loop, subagent orchestration, slash commands, and plugin setup
+Author: Joe Fernandez
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.0

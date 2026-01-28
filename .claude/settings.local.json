@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(CLAUDE_PLUGIN_ROOT=/Users/joe/Dev/spectre-labs/sparks python3:*)",
+      "Bash(git -C /Users/joe/Dev/spectre-labs log --oneline -5)",
+      "Bash(git -C /Users/joe/Dev/spectre-labs checkout:*)"
+    ]
+  }
+}

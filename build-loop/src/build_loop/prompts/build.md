@@ -14,7 +14,7 @@ You are being invoked by an outer loop. You will complete **exactly ONE parent t
 
 ## Control Flow
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────┐
 │  STEP 1: Context Gathering                                  │
 │  STEP 2: Task Planning (select ONE task)                    │
@@ -32,14 +32,17 @@ You are being invoked by an outer loop. You will complete **exactly ONE parent t
 Read and understand the current state before doing any work.
 
 1. **Read the progress file** (if it exists)
+
    - Check **Codebase Patterns** section for patterns from prior iterations
    - Review iteration logs to understand what was accomplished
    - Note any recommended task updates or blockers
 
 2. **Read the additional context files** (if provided)
+
    - Understand scope, requirements, and constraints
 
 3. **Read the tasks file**
+
    - Parent tasks marked `[x]` are complete
    - Parent tasks marked `[ ]` are incomplete
 
@@ -62,8 +65,8 @@ Select **exactly ONE** incomplete parent task to work on.
 
 Implement the selected parent task.
 
-- Run the /spectre:tdd command to implement using TDD.
-- Complete all sub-tasks under the parent task
+- MANDATORY - Load the **@skill-spectre:spectre-tdd Spectre Tdd Skill** using the Skill tool before beginning work and follow the TDD instructions.
+- Complete all sub-tasks under the parent task using the Spectre TDD Skill.
 - Mark sub-tasks as `[x]` in the tasks file as you complete them
 - Mark the parent task as `[x]` when all sub-tasks are done
 - If the parent task doesn't have a checkbox, just mark **COMPLETE**.
@@ -79,6 +82,8 @@ Verify your work before committing.
 - Run linting on files you created or modified
 - Run tests relevant to files you touched
 - Fix any failures before proceeding
+- If you can exercise your code path using scripts, clis, or tests to verify — do so now.
+- Address any issues you identify until you can confirm 100% that the parent task you were responsible for is complete.
 - Do NOT skip this step
 
 ---
@@ -88,24 +93,27 @@ Verify your work before committing.
 Record your work, then STOP.
 
 1. **Commit your changes**
+
    - Stage all files changed for this task
    - Commit message format: `feat({{task_id}}): {{brief description}}`
 
-2. **Write to the progress file at `{progress_file_path}`**
+2. **Write to the progress file at** `{progress_file_path}`
 
    **Write to this EXACT path**: `{progress_file_path}`
 
    If the file doesn't exist, create it with this structure:
+
    ```markdown
    # Build Progress
-
+   
    ## Codebase Patterns
    <!-- Patterns discovered during build -->
-
+   
    ---
    ```
 
    Then append your iteration log:
+
    ```markdown
    ## Iteration — {{Parent Task Title}}
    **Status**: Complete
@@ -115,7 +123,9 @@ Record your work, then STOP.
    **Blockers/Risks**: [bullets or "None"]
    ```
 
-3. **IMMEDIATELY proceed to STEP 6** — Do NOT start another task.
+3. Write any learnings on running linters, tests, builds, api gotchas, etc. to [AGENTS.md](http://Agents.md) 
+
+4. **IMMEDIATELY proceed to STEP 6** — Do NOT start another task.
 
 ---
 
@@ -131,6 +141,7 @@ Output the promise tag and **end your response immediately**:
 - All tasks complete → `[[PROMISE:BUILD_COMPLETE]]`
 
 **Do NOT:**
+
 - Start the next task
 - Plan the next task
 - Do any more work

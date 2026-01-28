@@ -4,6 +4,19 @@ Experimental and power-user features for the [SPECTRE](https://github.com/Codena
 
 ## What's Here
 
+### CLI (Cross-Agent Compatibility)
+
+Command-line interface for running SPECTRE agents and commands from non-Claude Code environments (Codex, custom agents, automation).
+
+```bash
+cd cli
+pipx install -e .
+spectre --help
+spectre subagent list
+spectre subagent run dev "implement feature X"
+spectre command get /spectre:scope
+```
+
 ### Build Loop
 
 Automated task execution CLI that runs Claude Code in a loop, completing one task per iteration.
@@ -20,7 +33,7 @@ Knowledge capture plugin for Claude Code. Capture learnings from conversations a
 
 ```bash
 # Add marketplace and install plugin
-/plugin marketplace add Codename-Inc/spectre-labs
+/plugin marketplace add Codename-Inc/spectre-labs/sparks
 /plugin install sparks@spectre-labs
 ```
 

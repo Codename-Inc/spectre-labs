@@ -27,6 +27,10 @@ If ANY entry's triggers or description match your current task, you MUST load th
 The registry tells you exactly where relevant knowledge is. Loading it first makes you faster and more accurate.
 
 DO NOT search the codebase or dispatch agents BEFORE loading relevant knowledge—even if you think you already have enough context. Partial context from Read results or error messages is not a substitute for the complete picture in the skill.
+
+**You are also responsible for keeping knowledge current.** After completing significant work — implementing features, fixing bugs, discovering gotchas, making architectural decisions, or changing patterns — you MUST proactively check whether any loaded skills need updating, and whether new skills should be captured.
+
+Do NOT wait for the user to say "/learn" or "update the skill." If you changed how something works, the skill that describes it is now stale. Fix it.
 </CRITICAL>
 
 ## Registry Location
@@ -51,6 +55,29 @@ Each entry corresponds to a skill that can be loaded via `Skill({skill-name})`
 5. **Then proceed** — now you can search/implement with context
 6. **No matches?** Proceed normally
 
+## Keeping Knowledge Current
+
+Loading skills is half the job. The other half is **leaving them better than you found them**.
+
+### When to Update (Proactively — Don't Wait to Be Asked)
+
+After completing work, ask yourself:
+
+1. **Did I load a skill that's now outdated?** → Update it immediately
+2. **Did I discover something capture-worthy?** (gotcha, pattern, decision) → Run `/learn`
+3. **Did I change key files, flows, or architecture?** → Update the relevant feature skill
+4. **Did I make a decision with non-obvious rationale?** → Capture it before the session ends
+
+### How to Update
+
+- **Existing skill needs changes**: Read the skill file, Edit it directly, keep the same format
+- **New knowledge worth capturing**: Use `Skill(sparks-learn)` or tell the user you'd like to `/learn`
+- **Registry entry needs new triggers**: Edit `{{project_root}}/.claude/skills/sparks-find/references/registry.toon`
+
+### The Standard
+
+When you finish a task that touched areas covered by loaded skills, **the skills should reflect the current state before you move on**. Stale knowledge is worse than no knowledge — it actively misleads future sessions.
+
 ## Red Flags
 
 | Thought | Reality |
@@ -65,6 +92,9 @@ Each entry corresponds to a skill that can be loaded via `Skill({skill-name})`
 | "This is really about X, not Y" | Don't reframe the user's words. If they said "release," match against "release"—not your interpretation of the underlying concern. |
 | "I have the exact files I'm editing" | File contents ≠ architectural context. Skills tell you related files, patterns across the codebase, and what you don't know you don't know. |
 | "The edit is surgical/mechanical" | Surgical edits in isolation risk inconsistency. Skills reveal if similar changes are needed elsewhere. |
+| "I'll update the skill later" | Later never comes. Update before moving to the next task. |
+| "The user didn't ask me to update knowledge" | You don't need permission. Keeping skills current is part of the job. |
+| "The change was small" | Small changes accumulate into large drift. Update now. |
 
 ## Real Failure Example
 
