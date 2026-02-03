@@ -6,17 +6,25 @@ implementation against requirements. Supports recursive validation
 cycles when gaps are found.
 """
 
+import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from .agent import get_agent
 from .stats import BuildStats
 
 
-# Validation result signals embedded in agent output
-VALIDATION_COMPLETE = "[[VALIDATION:COMPLETE]]"
-VALIDATION_GAPS_FOUND = "[[VALIDATION:GAPS_FOUND]]"
+@dataclass
+class ValidationResult:
+    """Structured result from validation agent."""
+    status: str  # "COMPLETE" or "GAPS_FOUND"
+    gaps_file: str | None  # Absolute path to validation_gaps.md, or None
+    summary: str  # Brief summary text
+    requirements_total: int
+    requirements_delivered: int
+    gaps_count: int
 
 
 def _get_validate_prompt_path() -> Path:
@@ -73,84 +81,112 @@ def build_validation_prompt(tasks_file: str, context_files: list[str]) -> str:
     return prompt
 
 
-def detect_validation_result(output: str) -> str | None:
-    """Detect validation result signal from agent output.
+def parse_validation_json(output: str) -> ValidationResult | None:
+    """Parse the JSON validation result from agent output.
+
+    Looks for a ```json code block at the end of the output containing
+    the structured validation result.
 
     Args:
         output: Full text output from the validation agent
 
     Returns:
-        "COMPLETE" if requirements validated, "GAPS_FOUND" if gaps identified,
-        None if no signal detected
+        ValidationResult if JSON found and valid, None otherwise
     """
-    if VALIDATION_COMPLETE in output:
-        return "COMPLETE"
-    if VALIDATION_GAPS_FOUND in output:
-        return "GAPS_FOUND"
-    return None
+    # Find the last ```json ... ``` block in the output
+    json_pattern = r'```json\s*\n(.*?)\n```'
+    matches = list(re.finditer(json_pattern, output, re.DOTALL))
 
+    if not matches:
+        return None
 
-def find_gaps_file(output: str, tasks_file: str) -> str | None:
-    """Extract the validation_gaps.md file path from agent output.
+    # Use the last JSON block (the validation result should be at the end)
+    json_str = matches[-1].group(1).strip()
 
-    Looks for the generated gaps file path in the output. Falls back to
-    standard location based on git branch if not found.
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError:
+        return None
 
-    Args:
-        output: Full text output from the validation agent
-        tasks_file: Original tasks file path (used to derive default location)
+    # Extract fields with defaults
+    status = data.get("status", "").upper()
+    if status not in ("COMPLETE", "GAPS_FOUND"):
+        return None
 
-    Returns:
-        Absolute path to validation_gaps.md if found/exists, None otherwise
-    """
-    # Try to find path mentioned in output
-    # Look for patterns like: `docs/tasks/main/validation/validation_gaps.md`
-    match = re.search(r'`([^`]*validation_gaps\.md)`', output)
-    if match:
-        gaps_path = Path(match.group(1))
+    gaps_file = data.get("gaps_file")
+    if gaps_file:
+        # Resolve to absolute path if relative
+        gaps_path = Path(gaps_file)
         if not gaps_path.is_absolute():
             gaps_path = Path.cwd() / gaps_path
-        if gaps_path.is_file():
-            return str(gaps_path.resolve())
+        gaps_file = str(gaps_path.resolve()) if gaps_path.exists() else None
 
-    # Fall back to standard location
-    tasks_dir = Path(tasks_file).parent
-    standard_path = tasks_dir / "validation" / "validation_gaps.md"
-    if standard_path.is_file():
-        return str(standard_path.resolve())
+    stats = data.get("stats", {})
 
-    return None
+    return ValidationResult(
+        status=status,
+        gaps_file=gaps_file,
+        summary=data.get("summary", ""),
+        requirements_total=stats.get("requirements_total", 0),
+        requirements_delivered=stats.get("requirements_delivered", 0),
+        gaps_count=stats.get("gaps_count", 0),
+    )
 
 
-def has_remediation_tasks(gaps_file: str) -> bool:
-    """Check if the gaps file contains actual remediation tasks.
+def fallback_detect_result(output: str, tasks_file: str) -> ValidationResult | None:
+    """Fallback detection using legacy signal patterns.
 
-    Looks for task checkboxes (- [ ]) in the Gap Remediation Tasks section.
+    Used when JSON parsing fails. Looks for [[VALIDATION:...]] signals
+    and tries to find gaps file by pattern matching.
 
     Args:
-        gaps_file: Path to validation_gaps.md
+        output: Full text output from the validation agent
+        tasks_file: Original tasks file path
 
     Returns:
-        True if there are unchecked tasks, False otherwise
+        ValidationResult if signals detected, None otherwise
     """
-    try:
-        content = Path(gaps_file).read_text(encoding="utf-8")
+    # Check for legacy signals
+    if "[[VALIDATION:COMPLETE]]" in output:
+        return ValidationResult(
+            status="COMPLETE",
+            gaps_file=None,
+            summary="Validation complete (legacy signal)",
+            requirements_total=0,
+            requirements_delivered=0,
+            gaps_count=0,
+        )
 
-        # Look for the Gap Remediation Tasks section
-        if "## Gap Remediation Tasks" not in content:
-            return False
+    if "[[VALIDATION:GAPS_FOUND]]" in output:
+        # Try to find gaps file
+        gaps_file = None
 
-        # Extract the section
-        tasks_section = content.split("## Gap Remediation Tasks")[1]
-        if "---" in tasks_section:
-            tasks_section = tasks_section.split("---")[0]
+        # Look for backtick-quoted path
+        match = re.search(r'`([^`]*validation_gaps\.md)`', output)
+        if match:
+            gaps_path = Path(match.group(1))
+            if not gaps_path.is_absolute():
+                gaps_path = Path.cwd() / gaps_path
+            if gaps_path.is_file():
+                gaps_file = str(gaps_path.resolve())
 
-        # Check for unchecked task boxes
-        unchecked = re.findall(r'- \[ \]', tasks_section)
-        return len(unchecked) > 0
+        # Fall back to standard location
+        if not gaps_file:
+            tasks_dir = Path(tasks_file).parent
+            standard_path = tasks_dir / "validation" / "validation_gaps.md"
+            if standard_path.is_file():
+                gaps_file = str(standard_path.resolve())
 
-    except (OSError, IndexError):
-        return False
+        return ValidationResult(
+            status="GAPS_FOUND",
+            gaps_file=gaps_file,
+            summary="Gaps found (legacy signal)",
+            requirements_total=0,
+            requirements_delivered=0,
+            gaps_count=0,
+        )
+
+    return None
 
 
 def run_validation(
@@ -205,25 +241,36 @@ def run_validation(
         print(f"❌ ERROR: Validation failed: {e}", file=sys.stderr)
         return 1, "", None
 
-    # Detect validation result
-    result = detect_validation_result(output)
-    gaps_file = None
+    # Parse validation result from JSON (with fallback to legacy signals)
+    result = parse_validation_json(output)
+    if result is None:
+        result = fallback_detect_result(output, tasks_file)
 
-    if result == "GAPS_FOUND":
-        gaps_file = find_gaps_file(output, tasks_file)
-        if gaps_file and has_remediation_tasks(gaps_file):
-            print(f"\n{'='*60}")
-            print("⚠️ VALIDATION FOUND GAPS")
-            print(f"   Gaps file: {gaps_file}")
-            print(f"{'='*60}\n")
-        else:
-            # Gaps file exists but no actual tasks
-            gaps_file = None
-            result = "COMPLETE"
+    if result is None:
+        # No valid result detected
+        print(f"\n{'='*60}")
+        print("⚠️ VALIDATION OUTPUT NOT PARSEABLE")
+        print("   Could not find JSON result or legacy signals in output")
+        print(f"{'='*60}\n")
+        return exit_code, output, None
 
-    if result == "COMPLETE" or gaps_file is None:
+    # Print result summary
+    if result.status == "GAPS_FOUND" and result.gaps_file:
+        print(f"\n{'='*60}")
+        print("⚠️ VALIDATION FOUND GAPS")
+        print(f"   Status: {result.status}")
+        print(f"   Delivered: {result.requirements_delivered}/{result.requirements_total}")
+        print(f"   Gaps: {result.gaps_count}")
+        print(f"   Gaps file: {result.gaps_file}")
+        if result.summary:
+            print(f"   Summary: {result.summary}")
+        print(f"{'='*60}\n")
+    else:
         print(f"\n{'='*60}")
         print("✅ VALIDATION COMPLETE - All requirements verified")
+        print(f"   Delivered: {result.requirements_delivered}/{result.requirements_total}")
+        if result.summary:
+            print(f"   Summary: {result.summary}")
         print(f"{'='*60}\n")
 
-    return exit_code, output, gaps_file
+    return exit_code, output, result.gaps_file

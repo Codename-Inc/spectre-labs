@@ -170,7 +170,7 @@ When verifying any implementation:
 
 ## Step (4/4) - Present Results & Signal Completion
 
-- **Action** — PresentResults: Show validation summary.
+- **Action** — PresentResults: Show validation summary to the user.
 
   > ## Validation Complete
   > **Status**: {Complete | Needs Work | Significant Gaps}
@@ -182,18 +182,27 @@ When verifying any implementation:
   >
   > {1-2 sentence summary of key findings}
 
-- **Action** — OutputSignal: **CRITICAL** - Output exactly ONE of these signals at the end of your response:
+- **Action** — OutputJSON: **CRITICAL** - Output a JSON block at the very end of your response that the build loop will parse:
 
-  **If ALL requirements are verified (no gaps):**
-  ```
-  [[VALIDATION:COMPLETE]]
+  ```json
+  {
+    "status": "COMPLETE" | "GAPS_FOUND",
+    "gaps_file": "/absolute/path/to/validation_gaps.md" | null,
+    "summary": "Brief 1-2 sentence summary",
+    "stats": {
+      "requirements_total": 5,
+      "requirements_delivered": 5,
+      "gaps_count": 0
+    }
+  }
   ```
 
-  **If gaps were found requiring remediation:**
-  ```
-  [[VALIDATION:GAPS_FOUND]]
-  ```
+  **Rules:**
+  - `status`: Use `"COMPLETE"` if all requirements verified, `"GAPS_FOUND"` if gaps exist
+  - `gaps_file`: Absolute path to the validation_gaps.md file you created, or `null` if status is COMPLETE
+  - The JSON must be valid and parseable
+  - Place it in a ```json code block at the very end of your response
 
-  The outer build loop uses this signal to determine next steps:
+  The outer build loop parses this JSON to determine next steps:
   - `COMPLETE` → Feature is done, build loop ends
-  - `GAPS_FOUND` → Another build cycle will run using `validation_gaps.md` as the new tasks file
+  - `GAPS_FOUND` → Another build cycle will run using the `gaps_file` as the new tasks file
