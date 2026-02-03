@@ -18,13 +18,23 @@ from .notify import notify_build_complete, notify_build_error
 # Session file location
 SESSION_FILE = ".spectre/build-session.json"
 
+# Maximum validation cycles before forcing exit (prevent infinite loops)
+MAX_VALIDATION_CYCLES = 5
+
 
 def get_session_path() -> Path:
     """Get absolute path to session file in current working directory."""
     return Path.cwd() / SESSION_FILE
 
 
-def save_session(tasks_file: str, context_files: list[str], max_iterations: int) -> None:
+def save_session(
+    tasks_file: str,
+    context_files: list[str],
+    max_iterations: int,
+    agent: str = "claude",
+    validate: bool = False,
+    manifest_path: str | None = None,
+) -> None:
     """
     Save current build session to disk for later resume.
 
@@ -37,6 +47,9 @@ def save_session(tasks_file: str, context_files: list[str], max_iterations: int)
         "tasks_file": tasks_file,
         "context_files": context_files,
         "max_iterations": max_iterations,
+        "agent": agent,
+        "validate": validate,
+        "manifest_path": manifest_path,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "cwd": str(Path.cwd()),
     }
@@ -64,6 +77,7 @@ def load_session() -> dict | None:
 def format_session_summary(session: dict) -> str:
     """Format session details for confirmation prompt."""
     lines = [
+        f"  Agent:      {session.get('agent', 'claude')}",
         f"  Tasks:      {session['tasks_file']}",
     ]
 
@@ -76,6 +90,12 @@ def format_session_summary(session: dict) -> str:
 
     lines.append(f"  Max iter:   {session['max_iterations']}")
 
+    if session.get("validate"):
+        lines.append("  Validate:   yes")
+
+    if session.get("manifest_path"):
+        lines.append(f"  Manifest:   {session['manifest_path']}")
+
     if session.get("started_at"):
         lines.append(f"  Last run:   {session['started_at']}")
 
@@ -86,7 +106,7 @@ def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog="spectre-build",
-        description="Execute Claude in a loop, completing one parent task per iteration.",
+        description="Execute an agent in a loop, completing one parent task per iteration.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -99,23 +119,28 @@ Examples:
   # With multiple context files and custom iteration limit
   spectre-build --tasks docs/tasks.md --context docs/scope.md docs/plan.md --max-iterations 15
 
+  # With post-build validation
+  spectre-build --tasks docs/tasks.md --context docs/scope.md --validate
+
+  # From a manifest file
+  spectre-build docs/tasks/feature-x/build.md
+
   # Resume last session (after stopping to edit files)
   spectre-build resume
 """,
     )
 
-    # Subcommand for resume
+    # Positional argument for manifest file or resume command
     parser.add_argument(
-        "command",
+        "manifest_or_command",
         nargs="?",
-        choices=["resume"],
-        help="Use 'resume' to restart the last build session",
+        help="Build manifest (.md file) or 'resume' command",
     )
 
     parser.add_argument(
         "--tasks",
         type=str,
-        help="Path to tasks.md file (required)",
+        help="Path to tasks.md file",
     )
 
     parser.add_argument(
@@ -144,6 +169,20 @@ Examples:
         "--no-notify",
         action="store_true",
         help="Disable completion notifications",
+    )
+
+    parser.add_argument(
+        "--agent",
+        type=str,
+        choices=["claude", "codex"],
+        default="claude",
+        help="Coding agent to run (default: claude)",
+    )
+
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Run post-build validation after successful build",
     )
 
     parser.add_argument(
@@ -195,6 +234,22 @@ def prompt_for_context_files() -> list[str]:
     return [p for p in paths if p]  # Filter empty strings
 
 
+def prompt_for_agent() -> str:
+    """Interactively prompt for agent selection with default."""
+    default = "claude"
+    print(f"Agent [claude/codex] ({default}): ", end="")
+    response = input().strip().lower()
+
+    if not response:
+        return default
+
+    if response in ("claude", "codex"):
+        return response
+
+    print(f"Invalid choice. Using default: {default}")
+    return default
+
+
 def prompt_for_max_iterations() -> int:
     """Interactively prompt for max iterations with default."""
     default = 10
@@ -213,6 +268,13 @@ def prompt_for_max_iterations() -> int:
     except ValueError:
         print(f"Invalid number. Using default: {default}")
         return default
+
+
+def prompt_for_validate() -> bool:
+    """Interactively prompt for validation after build."""
+    print("Run validation after build? [y/N]: ", end="")
+    response = input().strip().lower()
+    return response in ("y", "yes")
 
 
 def validate_inputs(
@@ -272,6 +334,95 @@ def format_duration(seconds: float) -> str:
         return f"{hours}h {mins}m"
 
 
+def run_build_validate_cycle(
+    tasks_file: str,
+    context_files: list[str],
+    max_iterations: int,
+    agent: str = "claude",
+    validate: bool = False,
+) -> tuple[int, int]:
+    """Run build loop with optional recursive validation cycles.
+
+    When validation is enabled and gaps are found, this function:
+    1. Runs the build loop with the current tasks file
+    2. Runs validation to check for gaps
+    3. If gaps found, uses validation_gaps.md as the new tasks file
+    4. Repeats until validation passes or max cycles reached
+
+    Args:
+        tasks_file: Absolute path to the tasks file
+        context_files: List of absolute paths to context files
+        max_iterations: Maximum iterations per build loop
+        agent: Agent backend to use
+        validate: Whether to run validation after build
+
+    Returns:
+        Tuple of (exit_code, total_iterations_completed)
+    """
+    from .validate import run_validation
+
+    total_iterations = 0
+    cycle = 0
+    current_tasks_file = tasks_file
+
+    while True:
+        cycle += 1
+
+        # Print cycle header if validating
+        if validate and cycle > 1:
+            print(f"\n{'='*60}")
+            print(f"🔄 BUILD CYCLE {cycle} (Gap Remediation)")
+            print(f"   Tasks: {current_tasks_file}")
+            print(f"{'='*60}\n")
+
+        # Run build loop
+        exit_code, iterations = run_build_loop(
+            current_tasks_file, context_files, max_iterations, agent=agent
+        )
+        total_iterations += iterations
+
+        # If build failed, exit
+        if exit_code != 0:
+            return exit_code, total_iterations
+
+        # If validation not enabled, we're done
+        if not validate:
+            return exit_code, total_iterations
+
+        # Run validation
+        val_exit_code, _, gaps_file = run_validation(
+            current_tasks_file, context_files, agent=agent
+        )
+
+        # If validation failed (process error), exit
+        if val_exit_code != 0:
+            return val_exit_code, total_iterations
+
+        # If no gaps found, validation complete
+        if gaps_file is None:
+            print(f"\n{'='*60}")
+            print(f"✅ FEATURE COMPLETE after {cycle} build cycle(s)")
+            print(f"   Total iterations: {total_iterations}")
+            print(f"{'='*60}\n")
+            return 0, total_iterations
+
+        # Gaps found - check cycle limit
+        if cycle >= MAX_VALIDATION_CYCLES:
+            print(f"\n{'='*60}")
+            print(f"⚠️ MAX VALIDATION CYCLES ({MAX_VALIDATION_CYCLES}) REACHED")
+            print(f"   Remaining gaps: {gaps_file}")
+            print(f"   Review and run manually if needed")
+            print(f"{'='*60}\n")
+            return 0, total_iterations  # Exit gracefully, not an error
+
+        # Set up next cycle with gaps file as tasks
+        current_tasks_file = gaps_file
+        print(f"\n{'='*60}")
+        print(f"📋 STARTING REMEDIATION CYCLE {cycle + 1}")
+        print(f"   Gaps to address: {gaps_file}")
+        print(f"{'='*60}\n")
+
+
 def run_resume(args: argparse.Namespace) -> None:
     """Handle the 'resume' subcommand."""
     import time
@@ -300,6 +451,9 @@ def run_resume(args: argparse.Namespace) -> None:
     tasks_file = session["tasks_file"]
     context_files = session.get("context_files", [])
     max_iterations = session.get("max_iterations", 10)
+    agent = session.get("agent", "claude")
+    validate = session.get("validate", False)
+    manifest_path = session.get("manifest_path")
 
     # Validate files still exist
     validate_inputs(tasks_file, context_files, max_iterations)
@@ -309,14 +463,79 @@ def run_resume(args: argparse.Namespace) -> None:
     project_name = Path.cwd().name
 
     # Update session timestamp
-    save_session(tasks_file, context_files, max_iterations)
+    save_session(tasks_file, context_files, max_iterations, agent=agent,
+                 validate=validate, manifest_path=manifest_path)
 
     # Track build duration
     start_time = time.time()
 
-    # Run the build loop
-    exit_code, iterations_completed = run_build_loop(
-        tasks_file, context_files, max_iterations
+    # Run build with recursive validation
+    exit_code, iterations_completed = run_build_validate_cycle(
+        tasks_file, context_files, max_iterations,
+        agent=agent, validate=validate
+    )
+
+    # Calculate duration
+    duration = time.time() - start_time
+    duration_str = format_duration(duration)
+
+    # Send notification if enabled
+    if send_notification:
+        notify_build_complete(
+            tasks_completed=iterations_completed,
+            total_time=duration_str,
+            success=(exit_code == 0),
+            project=project_name,
+        )
+
+    sys.exit(exit_code)
+
+
+def run_manifest(manifest_path: str, args: argparse.Namespace) -> None:
+    """Run build from a manifest file."""
+    import time
+
+    from .manifest import load_manifest
+
+    try:
+        manifest = load_manifest(manifest_path)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error loading manifest: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Extract values from manifest
+    tasks_file = manifest.tasks
+    context_files = manifest.context
+    max_iterations = manifest.max_iterations
+    agent = manifest.agent
+    validate = manifest.validate
+
+    # CLI flags can override manifest
+    if args.agent != "claude":  # non-default means user specified
+        agent = args.agent
+    if args.validate:
+        validate = True
+    if args.max_iterations != 10:  # non-default means user specified
+        max_iterations = args.max_iterations
+
+    # Validate inputs
+    validate_inputs(tasks_file, context_files, max_iterations)
+
+    # Determine notification setting
+    send_notification = args.notify and not args.no_notify
+    project_name = Path.cwd().name
+
+    # Save session for resume
+    save_session(tasks_file, context_files, max_iterations, agent=agent,
+                 validate=validate, manifest_path=manifest_path)
+
+    # Track build duration
+    start_time = time.time()
+
+    # Run build with recursive validation
+    exit_code, iterations_completed = run_build_validate_cycle(
+        tasks_file, context_files, max_iterations,
+        agent=agent, validate=validate
     )
 
     # Calculate duration
@@ -341,10 +560,18 @@ def main() -> None:
 
     args = parse_args()
 
-    # Handle resume subcommand
-    if args.command == "resume":
+    # Determine mode based on positional argument
+    positional = args.manifest_or_command
+
+    # Handle resume command
+    if positional == "resume":
         run_resume(args)
-        return  # run_resume calls sys.exit
+        return
+
+    # Handle manifest file (ends with .md and isn't "resume")
+    if positional and positional.endswith(".md"):
+        run_manifest(positional, args)
+        return
 
     # Determine notification setting (--no-notify overrides --notify)
     send_notification = args.notify and not args.no_notify
@@ -379,8 +606,20 @@ def main() -> None:
     tasks_file = str(Path(tasks_file).resolve())
     context_files = [str(Path(f).resolve()) for f in context_files]
 
+    # Get agent choice - from args in flag mode, prompt in interactive mode
+    if flag_mode:
+        agent = args.agent
+    else:
+        agent = prompt_for_agent()
+
+    # Get validate choice - from args in flag mode, prompt in interactive mode
+    if flag_mode:
+        validate = args.validate
+    else:
+        validate = prompt_for_validate()
+
     # Save session for future resume
-    save_session(tasks_file, context_files, max_iterations)
+    save_session(tasks_file, context_files, max_iterations, agent=agent, validate=validate)
 
     # Get project name for notification
     project_name = Path.cwd().name
@@ -388,9 +627,10 @@ def main() -> None:
     # Track build duration
     start_time = time.time()
 
-    # Run the build loop
-    exit_code, iterations_completed = run_build_loop(
-        tasks_file, context_files, max_iterations
+    # Run build with recursive validation
+    exit_code, iterations_completed = run_build_validate_cycle(
+        tasks_file, context_files, max_iterations,
+        agent=agent, validate=validate
     )
 
     # Calculate duration

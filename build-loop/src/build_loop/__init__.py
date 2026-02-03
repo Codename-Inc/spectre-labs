@@ -1,11 +1,12 @@
 # cli/build - Build loop module
 """
-Spectre Build CLI - Execute Claude in a loop, one parent task per iteration.
+Spectre Build CLI - Execute an agent in a loop, one parent task per iteration.
 
-The CLI handles the loop; Claude handles task tracking and progress writing.
+The CLI handles the loop; the agent handles task tracking and progress writing.
 """
 
-from .loop import run_build_loop, ALLOWED_TOOLS, DENIED_TOOLS
+from .agent import get_agent, CLAUDE_ALLOWED_TOOLS, CLAUDE_DENIED_TOOLS
+from .loop import run_build_loop
 from .prompt import build_prompt
 from .stats import BuildStats
 from .stream import format_tool_call, process_stream_event
@@ -18,8 +19,9 @@ __all__ = [
     "BuildStats",
     "format_tool_call",
     "process_stream_event",
-    "ALLOWED_TOOLS",
-    "DENIED_TOOLS",
+    "get_agent",
+    "CLAUDE_ALLOWED_TOOLS",
+    "CLAUDE_DENIED_TOOLS",
 ]
 
 
