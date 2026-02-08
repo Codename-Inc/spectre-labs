@@ -2,40 +2,61 @@
 
 Experimental and power-user features for the [SPECTRE](https://github.com/Codename-Inc/spectre) workflow framework.
 
-## What's Here
+## Build Loop
 
-### CLI (Cross-Agent Compatibility)
+Automated task execution CLI that runs Claude Code (or Codex) in a loop, completing one parent task per iteration with built-in validation.
 
-Command-line interface for running SPECTRE agents and commands from non-Claude Code environments (Codex, custom agents, automation).
-
-```bash
-cd cli
-pipx install -e .
-spectre --help
-spectre subagent list
-spectre subagent run dev "implement feature X"
-spectre command get /spectre:scope
-```
-
-### Build Loop
-
-Automated task execution CLI that runs Claude Code in a loop, completing one task per iteration.
+### Install
 
 ```bash
 cd build-loop
 pipx install -e .
-spectre-build --tasks tasks.md --max-iterations 10
 ```
 
-### Sparks
-
-Knowledge capture plugin for Claude Code. Capture learnings from conversations and automatically recall them when relevant.
+### Usage
 
 ```bash
-# Add marketplace and install plugin
-/plugin marketplace add Codename-Inc/spectre-labs/sparks
-/plugin install sparks@spectre-labs
+# Interactive mode (prompts for inputs)
+spectre-build
+
+# Flag-based
+spectre-build --tasks tasks.md --context scope.md --max-iterations 10
+
+# With post-build validation
+spectre-build --tasks tasks.md --validate
+
+# From a manifest file (YAML frontmatter)
+spectre-build docs/tasks/feature-x/build.md
+
+# Resume interrupted session
+spectre-build resume
+
+# Start the web GUI
+spectre-build serve
 ```
+
+### Features
+
+- **Multi-agent** — Pluggable backends (Claude Code, Codex)
+- **Validation cycles** — Post-build gap analysis with automatic remediation
+- **Manifest mode** — Self-documenting builds via YAML frontmatter in `.md` files
+- **Pipeline mode** — Stage-based execution from YAML definitions
+- **Session resume** — Pick up where you left off after interruptions
+- **TDD integration** — Loads `spectre-tdd` skill for test-driven execution
+- **Web GUI** — FastAPI server with real-time WebSocket streaming
+
+### How It Works
+
+Each iteration follows a 6-step cycle:
+
+1. **Context Gathering** — Read progress, context files, and task state
+2. **Task Planning** — Select one incomplete parent task
+3. **Task Execution** — Implement with TDD
+4. **Verification** — Lint and test
+5. **Progress Update** — Commit and write progress
+6. **Promise** — Signal `TASK_COMPLETE` or `BUILD_COMPLETE`
+
+The loop exits when all tasks are marked complete or max iterations is reached.
 
 ## Why Separate?
 
