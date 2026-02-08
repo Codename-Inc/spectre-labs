@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectre Build</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header>
+        <h1>🔧 Spectre Build</h1>
+        <span id="status-badge" class="status-badge idle">Idle</span>
+    </header>
+    <main>
+        <!-- Left Panel: Pipeline List -->
+        <div class="panel" style="max-width: 300px;">
+            <div class="panel-header">Pipelines</div>
+            <div class="panel-content">
+                <div id="pipeline-list" class="pipeline-list">
+                    <div class="empty-state">Loading pipelines...</div>
+                </div>
+                <button class="primary" style="width: 100%; margin-top: 16px;" onclick="createPipeline()">
+                    + New Pipeline
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Panel: Pipeline Canvas -->
+        <div class="panel" style="flex: 2;">
+            <div class="panel-header">
+                <span id="canvas-title">Pipeline Canvas</span>
+                <div class="button-group">
+                    <button onclick="addStage()">+ Stage</button>
+                    <button onclick="savePipeline()">Save</button>
+                </div>
+            </div>
+            <div class="panel-content" id="canvas-container">
+                <canvas id="pipeline-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Right Panel: Execution -->
+        <div class="panel" style="max-width: 400px;">
+            <div class="panel-header">
+                Execution
+                <div class="button-group">
+                    <button id="start-btn" class="primary" onclick="startExecution()">Start</button>
+                    <button id="stop-btn" class="danger" onclick="stopExecution()" disabled>Stop</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="form-group">
+                    <label>Tasks File</label>
+                    <input type="text" id="tasks-file" placeholder="docs/tasks.md">
+                </div>
+                <div class="form-group">
+                    <label>Context Files (comma-separated)</label>
+                    <input type="text" id="context-files" placeholder="docs/scope.md">
+                </div>
+                <div class="form-group">
+                    <label>Agent</label>
+                    <select id="agent-select">
+                        <option value="claude">Claude</option>
+                        <option value="codex">Codex</option>
+                    </select>
+                </div>
+                <hr style="border-color: #30363d; margin: 16px 0;">
+                <div class="panel-header" style="padding: 0; border: 0; margin-bottom: 8px;">
+                    Execution Log
+                    <button onclick="clearLog()" style="padding: 4px 8px; font-size: 12px;">Clear</button>
+                </div>
+                <div id="log-container" class="log-container"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Stage Editor Modal -->
+    <div id="stage-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="stage-modal-title">Edit Stage</h2>
+                <button class="close-btn" onclick="closeStageModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Stage Name</label>
+                    <input type="text" id="stage-name" placeholder="build">
+                </div>
+                <div class="form-group">
+                    <label>Prompt Template Path</label>
+                    <input type="text" id="stage-prompt" placeholder="prompts/build.md">
+                </div>
+                <div class="form-group">
+                    <label>Max Iterations</label>
+                    <input type="number" id="stage-max-iterations" value="10" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Completion Type</label>
+                    <select id="stage-completion-type">
+                        <option value="promise">Promise (tag-based)</option>
+                        <option value="json">JSON (structured)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="promise-signals-group">
+                    <label>Completion Signals (comma-separated)</label>
+                    <input type="text" id="stage-signals" placeholder="TASK_COMPLETE, BUILD_COMPLETE">
+                </div>
+                <div class="form-group" id="json-statuses-group" style="display: none;">
+                    <label>Completion Statuses (comma-separated)</label>
+                    <input type="text" id="stage-statuses" placeholder="COMPLETE, APPROVED">
+                </div>
+                <div class="form-group">
+                    <label>Transitions (signal → stage, one per line)</label>
+                    <textarea id="stage-transitions" rows="3" placeholder="BUILD_COMPLETE → validate
+TASK_COMPLETE → build"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeStageModal()">Cancel</button>
+                <button id="delete-stage-btn" class="danger" onclick="deleteStage()">Delete</button>
+                <button class="primary" onclick="saveStage()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/pipeline-builder.js"></script>
+    <script src="/static/execution-panel.js"></script>
+    <script>
+        // Initialize after scripts load
+        function initApp() {
+            console.log('Spectre Build GUI initializing...');
+            try {
+                if (typeof resizeCanvas === 'function') {
+                    resizeCanvas();
+                } else {
+                    console.error('resizeCanvas not found');
+                }
+                if (typeof loadPipelines === 'function') {
+                    loadPipelines().catch(e => console.error('loadPipelines failed:', e));
+                } else {
+                    console.error('loadPipelines not found');
+                }
+            } catch (e) {
+                console.error('Initialization failed:', e);
+                const el = document.getElementById('pipeline-list');
+                if (el) el.innerHTML = `<div class="empty-state">Init failed: ${e.message}</div>`;
+            }
+        }
+
+        // Run init when ready
+        if (document.readyState === 'complete') {
+            initApp();
+        } else {
+            window.addEventListener('load', initApp);
+        }
+    </script>
+</body>
+</html>

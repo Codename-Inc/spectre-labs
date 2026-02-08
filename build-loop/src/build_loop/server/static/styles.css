@@ -1,0 +1,370 @@
+/* Spectre Build GUI Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #f0f6fc;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #238636;
+    color: white;
+}
+
+.status-badge.idle { background: #6e7681; }
+.status-badge.running { background: #1f6feb; }
+.status-badge.completed { background: #238636; }
+.status-badge.failed { background: #da3633; }
+.status-badge.stopped { background: #6e7681; }
+.status-badge.pending { background: #6e7681; }
+
+/* Main Layout */
+main {
+    flex: 1;
+    display: flex;
+    gap: 1px;
+    background: #30363d;
+}
+
+/* Panels */
+.panel {
+    background: #0d1117;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #30363d;
+    font-weight: 600;
+    color: #f0f6fc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-content {
+    flex: 1;
+    padding: 16px;
+    overflow: auto;
+}
+
+/* Canvas */
+#canvas-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    cursor: default;
+}
+
+/* Buttons */
+button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #c9d1d9;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: #30363d;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button.primary {
+    background: #238636;
+    border-color: #238636;
+    color: white;
+}
+
+button.primary:hover {
+    background: #2ea043;
+}
+
+button.danger {
+    background: #da3633;
+    border-color: #da3633;
+    color: white;
+}
+
+button.danger:hover {
+    background: #f85149;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: #8b949e;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #c9d1d9;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #58a6ff;
+}
+
+/* Pipeline List */
+.pipeline-list {
+    list-style: none;
+}
+
+.pipeline-item {
+    padding: 12px;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.pipeline-item:hover {
+    border-color: #58a6ff;
+}
+
+.pipeline-item.selected {
+    border-color: #58a6ff;
+    background: #161b22;
+}
+
+.pipeline-item h3 {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.pipeline-item p {
+    font-size: 12px;
+    color: #8b949e;
+}
+
+.pipeline-item .stages {
+    margin-top: 4px;
+    color: #58a6ff;
+    font-size: 12px;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 48px;
+    color: #6e7681;
+}
+
+/* Log Container */
+.log-container {
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    background: #161b22;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+.log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid #21262d;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-entry.stage-started {
+    color: #58a6ff;
+}
+
+.log-entry.stage-completed {
+    color: #3fb950;
+}
+
+.log-entry.iteration {
+    color: #8b949e;
+}
+
+.log-entry.error {
+    color: #f85149;
+}
+
+.log-entry.pipeline {
+    color: #a371f7;
+    font-weight: 500;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    padding: 16px;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    color: #f0f6fc;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: #f0f6fc;
+    background: none;
+}
+
+.modal-body {
+    padding: 16px;
+}
+
+.modal-footer {
+    padding: 16px;
+    border-top: 1px solid #30363d;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* Stage nodes on canvas */
+.stage-node {
+    position: absolute;
+    width: 120px;
+    height: 60px;
+    background: #161b22;
+    border: 2px solid #30363d;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: move;
+    font-weight: 500;
+}
+
+.stage-node:hover {
+    border-color: #58a6ff;
+}
+
+.stage-node.active {
+    border-color: #58a6ff;
+    box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+}
+
+.stage-node.complete {
+    border-color: #3fb950;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #161b22;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}

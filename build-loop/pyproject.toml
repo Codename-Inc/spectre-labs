@@ -7,7 +7,19 @@ name = "spectre-build"
 version = "1.0.0"
 description = "Automated task execution CLI for Claude Code"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+]
 
 [project.scripts]
 spectre-build = "build_loop:main"
@@ -16,4 +28,4 @@ spectre-build = "build_loop:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-build_loop = ["prompts/*.md"]
+build_loop = ["prompts/*.md", "server/static/*"]
