@@ -1,0 +1,4 @@
+# SPECTRE Knowledge Registry
+# Format: skill-name|category|triggers|description
+
+feature-build-loop|feature|build loop, spectre-build, build iteration, validation cycle, promise tags, build stats, build dashboard, token tracking|Use when modifying build loop code, debugging stats/token tracking, adding CLI features, changing iteration prompts, or understanding how spectre-build works end-to-end
