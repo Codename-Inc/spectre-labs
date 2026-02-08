@@ -193,6 +193,7 @@ def run_validation(
     tasks_file: str,
     context_files: list[str],
     agent: str = "claude",
+    stats: BuildStats | None = None,
 ) -> tuple[int, str, str | None]:
     """Run post-build validation using the full spectre validate prompt.
 
@@ -203,6 +204,8 @@ def run_validation(
         tasks_file: Absolute path to the tasks file
         context_files: List of absolute paths to additional context files
         agent: Agent backend to use ("claude" or "codex")
+        stats: Optional BuildStats to accumulate into. If None, creates a
+               local instance (validation stats won't be aggregated).
 
     Returns:
         Tuple of (exit_code, output_text, gaps_file_path)
@@ -229,8 +232,9 @@ def run_validation(
     # Build the validation prompt
     prompt = build_validation_prompt(tasks_file, context_files)
 
-    # Run single iteration (not a loop)
-    stats = BuildStats()
+    # Use provided stats or create local instance
+    if stats is None:
+        stats = BuildStats()
 
     try:
         exit_code, output, stderr = runner.run_iteration(prompt, stats=stats)

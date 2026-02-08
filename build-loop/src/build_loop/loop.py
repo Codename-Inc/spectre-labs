@@ -38,6 +38,7 @@ def run_build_loop(
     context_files: list[str],
     max_iterations: int,
     agent: str = "claude",
+    stats: BuildStats | None = None,
 ) -> tuple[int, int]:
     """
     Run the main build loop.
@@ -50,6 +51,9 @@ def run_build_loop(
         context_files: List of absolute paths to additional context files
         max_iterations: Maximum number of iterations
         agent: Agent backend to use ("claude" or "codex")
+        stats: Optional BuildStats to accumulate into. If None, creates a new
+               instance and prints summary on exit. When provided externally,
+               the caller is responsible for printing the final summary.
 
     Returns:
         Tuple of (exit_code, iterations_completed)
@@ -75,8 +79,11 @@ def run_build_loop(
     print(f"Max iterations: {max_iterations}")
     print("-----------------------------------\n")
 
-    # Initialize stats tracking
-    stats = BuildStats()
+    # Use provided stats or create local instance
+    # When stats is provided externally, caller owns the summary print
+    owns_stats = stats is None
+    if stats is None:
+        stats = BuildStats()
 
     # Main build loop
     iteration = 0
@@ -101,7 +108,8 @@ def run_build_loop(
             print(f"❌ ERROR: {runner.name} CLI not found", file=sys.stderr)
             print(f"   Iteration: {iteration}/{max_iterations}", file=sys.stderr)
             print(f"{'='*60}", file=sys.stderr)
-            stats.print_summary()
+            if owns_stats:
+                stats.print_summary()
             return 127, stats.iterations_completed  # Command not found
         except subprocess.TimeoutExpired:
             print(f"\n{'='*60}", file=sys.stderr)
@@ -112,7 +120,8 @@ def run_build_loop(
             print("Consider increasing timeout or breaking down tasks.", file=sys.stderr)
             print(f"{'='*60}", file=sys.stderr)
             stats.iterations_failed += 1
-            stats.print_summary()
+            if owns_stats:
+                stats.print_summary()
             return 124, stats.iterations_completed  # Timeout
 
         # Check for promise FIRST - if agent completed its task, trust that
@@ -134,7 +143,8 @@ def run_build_loop(
                     print(stderr, file=sys.stderr)
                 print(f"{'='*60}", file=sys.stderr)
                 stats.iterations_failed += 1
-                stats.print_summary()
+                if owns_stats:
+                    stats.print_summary()
                 return exit_code, stats.iterations_completed
 
         # Handle promise-based flow control
@@ -143,7 +153,8 @@ def run_build_loop(
             print(f"\n{'='*60}")
             print("✅ BUILD COMPLETE - All tasks finished!")
             print(f"{'='*60}")
-            stats.print_summary()
+            if owns_stats:
+                stats.print_summary()
             return 0, stats.iterations_completed
         elif promise == "TASK_COMPLETE":
             stats.iterations_completed += 1
@@ -159,5 +170,6 @@ def run_build_loop(
     print(f"⚠ Max iterations ({max_iterations}) reached. Build incomplete.")
     print("   Review build_progress.md and tasks file to assess state.")
     print(f"{'='*60}")
-    stats.print_summary()
+    if owns_stats:
+        stats.print_summary()
     return 1, stats.iterations_completed

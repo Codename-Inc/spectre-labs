@@ -8,6 +8,41 @@ import time
 from dataclasses import dataclass, field
 
 
+
+# Pricing per 1M tokens (USD) by model family
+# Source: https://docs.anthropic.com/en/docs/about-claude/models
+_MODEL_PRICING: dict[str, dict[str, float]] = {
+    "opus": {
+        "input": 15.0,
+        "output": 75.0,
+        "cache_read": 1.50,
+        "cache_write": 18.75,
+    },
+    "sonnet": {
+        "input": 3.0,
+        "output": 15.0,
+        "cache_read": 0.30,
+        "cache_write": 3.75,
+    },
+    "haiku": {
+        "input": 0.80,
+        "output": 4.0,
+        "cache_read": 0.08,
+        "cache_write": 1.0,
+    },
+}
+
+
+def _resolve_model_family(model_id: str) -> str:
+    """Map a model ID to a pricing family key."""
+    model_id = model_id.lower()
+    for family in ("opus", "haiku", "sonnet"):
+        if family in model_id:
+            return family
+    # Default to sonnet pricing if unknown
+    return "sonnet"
+
+
 @dataclass
 class BuildStats:
     """Track statistics across the build."""
@@ -18,14 +53,39 @@ class BuildStats:
     total_output_tokens: int = 0
     total_cache_read_tokens: int = 0
     total_cache_write_tokens: int = 0
+    total_cost_usd: float = 0.0
+    total_api_turns: int = 0
+    model: str = ""
     tool_calls: dict = field(default_factory=dict)
 
     def add_usage(self, usage: dict) -> None:
-        """Add token usage from an assistant message."""
+        """Add token usage from a result event."""
         self.total_input_tokens += usage.get("input_tokens", 0)
         self.total_output_tokens += usage.get("output_tokens", 0)
         self.total_cache_read_tokens += usage.get("cache_read_input_tokens", 0)
         self.total_cache_write_tokens += usage.get("cache_creation_input_tokens", 0)
+
+    def calculate_cost(self) -> float:
+        """Calculate cost from token counts and model pricing.
+
+        Uses the tracked model to look up per-token rates.
+        Input tokens from the API include cache reads, so we subtract
+        those to get the non-cached input count.
+        """
+        family = _resolve_model_family(self.model)
+        rates = _MODEL_PRICING[family]
+
+        # input_tokens from the API is total input INCLUDING cache reads,
+        # so non-cached input = input_tokens - cache_read_tokens
+        non_cached_input = max(0, self.total_input_tokens - self.total_cache_read_tokens)
+
+        cost = (
+            (non_cached_input / 1_000_000) * rates["input"]
+            + (self.total_output_tokens / 1_000_000) * rates["output"]
+            + (self.total_cache_read_tokens / 1_000_000) * rates["cache_read"]
+            + (self.total_cache_write_tokens / 1_000_000) * rates["cache_write"]
+        )
+        return cost
 
     def add_tool_call(self, tool_name: str) -> None:
         """Track a tool call."""
@@ -57,6 +117,15 @@ class BuildStats:
             return f"{count:,}"
         else:
             return str(count)
+
+    def _format_cost(self, cost: float) -> str:
+        """Format USD cost for display."""
+        if cost >= 1.0:
+            return f"${cost:.2f}"
+        elif cost > 0:
+            return f"${cost:.4f}"
+        else:
+            return "—"
 
     def _calculate_rank(self) -> str:
         """Calculate a rank based on build performance."""
@@ -101,6 +170,16 @@ class BuildStats:
         tasks_str = f"{self._progress_bar(task_pct)} {tasks_done}/{tasks_total}"
         cache_str = f"{self._progress_bar(cache_rate, 10)} {cache_rate*100:.0f}%"
 
+        # Calculate cost from token counts (always available)
+        # Prefer calculated cost since it uses our tracked token breakdowns;
+        # fall back to result-event cost if token data is missing
+        calculated_cost = self.calculate_cost()
+        cost = calculated_cost if calculated_cost > 0 else self.total_cost_usd
+        cost_str = self._format_cost(cost)
+
+        # Format turns line (only show if we have turn data)
+        turns_str = str(self.total_api_turns) if self.total_api_turns > 0 else "—"
+
         print()
         print("╭──────────────────────────────────────╮")
         print("│  $ spectre-build                     │")
@@ -113,6 +192,8 @@ class BuildStats:
         print(f"│  TOKENS     {self._format_tokens(total_tokens):<25}│")
         print(f"│  CACHE      {cache_str:<25}│")
         print(f"│  TOOLS      {total_tool_calls:<25}│")
+        print(f"│  TURNS      {turns_str:<25}│")
+        print(f"│  COST       {cost_str:<25}│")
         print("│                                      │")
         print("│  ─────────────────────────────────   │")
         print(f"│  RANK: {rank:<5}              exit 0   │")

@@ -34,6 +34,7 @@ def save_session(
     agent: str = "claude",
     validate: bool = False,
     manifest_path: str | None = None,
+    pipeline_path: str | None = None,
 ) -> None:
     """
     Save current build session to disk for later resume.
@@ -50,6 +51,7 @@ def save_session(
         "agent": agent,
         "validate": validate,
         "manifest_path": manifest_path,
+        "pipeline_path": pipeline_path,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "cwd": str(Path.cwd()),
     }
@@ -96,6 +98,9 @@ def format_session_summary(session: dict) -> str:
     if session.get("manifest_path"):
         lines.append(f"  Manifest:   {session['manifest_path']}")
 
+    if session.get("pipeline_path"):
+        lines.append(f"  Pipeline:   {session['pipeline_path']}")
+
     if session.get("started_at"):
         lines.append(f"  Last run:   {session['started_at']}")
 
@@ -122,19 +127,25 @@ Examples:
   # With post-build validation
   spectre-build --tasks docs/tasks.md --context docs/scope.md --validate
 
+  # Using a pipeline definition
+  spectre-build --pipeline .spectre/pipelines/full-feature.yaml --tasks docs/tasks.md
+
   # From a manifest file
   spectre-build docs/tasks/feature-x/build.md
 
   # Resume last session (after stopping to edit files)
   spectre-build resume
+
+  # Start the web GUI
+  spectre-build serve
 """,
     )
 
-    # Positional argument for manifest file or resume command
+    # Positional argument for manifest file or command
     parser.add_argument(
         "manifest_or_command",
         nargs="?",
-        help="Build manifest (.md file) or 'resume' command",
+        help="Build manifest (.md file), 'resume', or 'serve' command",
     )
 
     parser.add_argument(
@@ -183,6 +194,26 @@ Examples:
         "--validate",
         action="store_true",
         help="Run post-build validation after successful build",
+    )
+
+    parser.add_argument(
+        "--pipeline",
+        type=str,
+        help="Path to pipeline YAML definition file",
+    )
+
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port for web server (serve mode only, default: 8000)",
+    )
+
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host for web server (serve mode only, default: 127.0.0.1)",
     )
 
     parser.add_argument(
@@ -349,6 +380,9 @@ def run_build_validate_cycle(
     3. If gaps found, uses validation_gaps.md as the new tasks file
     4. Repeats until validation passes or max cycles reached
 
+    A single BuildStats instance is shared across all build and validation
+    cycles so the final summary reflects the entire session.
+
     Args:
         tasks_file: Absolute path to the tasks file
         context_files: List of absolute paths to context files
@@ -359,11 +393,15 @@ def run_build_validate_cycle(
     Returns:
         Tuple of (exit_code, total_iterations_completed)
     """
+    from .stats import BuildStats
     from .validate import run_validation
 
     total_iterations = 0
     cycle = 0
     current_tasks_file = tasks_file
+
+    # Single stats instance for the entire build+validate session
+    stats = BuildStats()
 
     while True:
         cycle += 1
@@ -375,27 +413,31 @@ def run_build_validate_cycle(
             print(f"   Tasks: {current_tasks_file}")
             print(f"{'='*60}\n")
 
-        # Run build loop
+        # Run build loop — pass shared stats so tokens/tools accumulate
         exit_code, iterations = run_build_loop(
-            current_tasks_file, context_files, max_iterations, agent=agent
+            current_tasks_file, context_files, max_iterations,
+            agent=agent, stats=stats,
         )
         total_iterations += iterations
 
-        # If build failed, exit
+        # If build failed, print aggregate summary and exit
         if exit_code != 0:
+            stats.print_summary()
             return exit_code, total_iterations
 
-        # If validation not enabled, we're done
+        # If validation not enabled, print summary and we're done
         if not validate:
+            stats.print_summary()
             return exit_code, total_iterations
 
-        # Run validation
+        # Run validation — pass shared stats so validation tokens count too
         val_exit_code, _, gaps_file = run_validation(
-            current_tasks_file, context_files, agent=agent
+            current_tasks_file, context_files, agent=agent, stats=stats,
         )
 
-        # If validation failed (process error), exit
+        # If validation failed (process error), print summary and exit
         if val_exit_code != 0:
+            stats.print_summary()
             return val_exit_code, total_iterations
 
         # If no gaps found, validation complete
@@ -404,6 +446,7 @@ def run_build_validate_cycle(
             print(f"✅ FEATURE COMPLETE after {cycle} build cycle(s)")
             print(f"   Total iterations: {total_iterations}")
             print(f"{'='*60}\n")
+            stats.print_summary()
             return 0, total_iterations
 
         # Gaps found - check cycle limit
@@ -413,6 +456,7 @@ def run_build_validate_cycle(
             print(f"   Remaining gaps: {gaps_file}")
             print(f"   Review and run manually if needed")
             print(f"{'='*60}\n")
+            stats.print_summary()
             return 0, total_iterations  # Exit gracefully, not an error
 
         # Set up next cycle with gaps file as tasks
@@ -421,6 +465,72 @@ def run_build_validate_cycle(
         print(f"📋 STARTING REMEDIATION CYCLE {cycle + 1}")
         print(f"   Gaps to address: {gaps_file}")
         print(f"{'='*60}\n")
+
+
+def run_pipeline(
+    pipeline_path: str,
+    tasks_file: str,
+    context_files: list[str],
+    agent: str = "claude",
+) -> tuple[int, int]:
+    """Run a pipeline from a YAML definition file.
+
+    Args:
+        pipeline_path: Path to the pipeline YAML file
+        tasks_file: Path to the tasks file
+        context_files: List of context file paths
+        agent: Agent backend to use
+
+    Returns:
+        Tuple of (exit_code, total_iterations_completed)
+    """
+    from .agent import get_agent
+    from .pipeline import load_pipeline
+    from .pipeline.executor import PipelineExecutor, PipelineStatus
+    from .stats import BuildStats
+
+    # Load pipeline config
+    try:
+        config = load_pipeline(pipeline_path)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error loading pipeline: {e}", file=sys.stderr)
+        return 1, 0
+
+    # Build context for prompt substitution
+    if context_files:
+        context_str = "\n".join(f"- `{f}`" for f in context_files)
+    else:
+        context_str = "None"
+
+    context = {
+        "tasks_file_path": tasks_file,
+        "progress_file_path": str(Path(tasks_file).parent / "build_progress.md"),
+        "additional_context_paths_or_none": context_str,
+    }
+
+    # Get agent runner
+    runner = get_agent(agent)
+    if not runner.check_available():
+        print(f"❌ ERROR: {runner.name} CLI not found", file=sys.stderr)
+        return 127, 0
+
+    # Create and run executor
+    stats = BuildStats()
+    executor = PipelineExecutor(
+        config=config,
+        runner=runner,
+        context=context,
+    )
+
+    state = executor.run(stats)
+
+    # Return based on pipeline status
+    if state.status == PipelineStatus.COMPLETED:
+        return 0, state.total_iterations
+    elif state.status == PipelineStatus.STOPPED:
+        return 130, state.total_iterations  # Interrupted
+    else:
+        return 1, state.total_iterations
 
 
 def run_resume(args: argparse.Namespace) -> None:
@@ -454,6 +564,7 @@ def run_resume(args: argparse.Namespace) -> None:
     agent = session.get("agent", "claude")
     validate = session.get("validate", False)
     manifest_path = session.get("manifest_path")
+    pipeline_path = session.get("pipeline_path")
 
     # Validate files still exist
     validate_inputs(tasks_file, context_files, max_iterations)
@@ -464,16 +575,21 @@ def run_resume(args: argparse.Namespace) -> None:
 
     # Update session timestamp
     save_session(tasks_file, context_files, max_iterations, agent=agent,
-                 validate=validate, manifest_path=manifest_path)
+                 validate=validate, manifest_path=manifest_path, pipeline_path=pipeline_path)
 
     # Track build duration
     start_time = time.time()
 
-    # Run build with recursive validation
-    exit_code, iterations_completed = run_build_validate_cycle(
-        tasks_file, context_files, max_iterations,
-        agent=agent, validate=validate
-    )
+    # Run build with pipeline or legacy mode
+    if pipeline_path:
+        exit_code, iterations_completed = run_pipeline(
+            pipeline_path, tasks_file, context_files, agent=agent
+        )
+    else:
+        exit_code, iterations_completed = run_build_validate_cycle(
+            tasks_file, context_files, max_iterations,
+            agent=agent, validate=validate
+        )
 
     # Calculate duration
     duration = time.time() - start_time
@@ -554,6 +670,27 @@ def run_manifest(manifest_path: str, args: argparse.Namespace) -> None:
     sys.exit(exit_code)
 
 
+def run_serve(args: argparse.Namespace) -> None:
+    """Start the web GUI server."""
+    try:
+        import uvicorn
+    except ImportError:
+        print("Error: uvicorn not installed. Run: pip install uvicorn[standard]", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"\n🚀 Starting Spectre Build GUI")
+    print(f"   URL: http://{args.host}:{args.port}")
+    print(f"   Press Ctrl+C to stop\n")
+
+    uvicorn.run(
+        "build_loop.server.app:app",
+        host=args.host,
+        port=args.port,
+        reload=False,
+        log_level="info",
+    )
+
+
 def main() -> None:
     """Main entry point for Spectre Build CLI."""
     import time
@@ -563,15 +700,25 @@ def main() -> None:
     # Determine mode based on positional argument
     positional = args.manifest_or_command
 
+    # Handle serve command
+    if positional == "serve":
+        run_serve(args)
+        return
+
     # Handle resume command
     if positional == "resume":
         run_resume(args)
         return
 
-    # Handle manifest file (ends with .md and isn't "resume")
+    # Handle manifest file (ends with .md and isn't a command)
     if positional and positional.endswith(".md"):
         run_manifest(positional, args)
         return
+
+    # Handle pipeline YAML file as positional argument
+    if positional and (positional.endswith(".yaml") or positional.endswith(".yml")):
+        args.pipeline = positional
+        positional = None
 
     # Determine notification setting (--no-notify overrides --notify)
     send_notification = args.notify and not args.no_notify
@@ -618,20 +765,30 @@ def main() -> None:
     else:
         validate = prompt_for_validate()
 
-    # Save session for future resume
-    save_session(tasks_file, context_files, max_iterations, agent=agent, validate=validate)
-
     # Get project name for notification
     project_name = Path.cwd().name
 
     # Track build duration
     start_time = time.time()
 
-    # Run build with recursive validation
-    exit_code, iterations_completed = run_build_validate_cycle(
-        tasks_file, context_files, max_iterations,
-        agent=agent, validate=validate
-    )
+    # Check for pipeline mode
+    if args.pipeline:
+        # Pipeline mode - use pipeline executor
+        pipeline_path = str(Path(args.pipeline).resolve())
+        save_session(tasks_file, context_files, max_iterations, agent=agent,
+                     validate=validate, pipeline_path=pipeline_path)
+
+        exit_code, iterations_completed = run_pipeline(
+            pipeline_path, tasks_file, context_files, agent=agent
+        )
+    else:
+        # Legacy mode - use build_validate_cycle
+        save_session(tasks_file, context_files, max_iterations, agent=agent, validate=validate)
+
+        exit_code, iterations_completed = run_build_validate_cycle(
+            tasks_file, context_files, max_iterations,
+            agent=agent, validate=validate
+        )
 
     # Calculate duration
     duration = time.time() - start_time

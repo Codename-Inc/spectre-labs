@@ -61,9 +61,9 @@ def process_stream_event(
         message = event.get("message", {})
         content = message.get("content", [])
 
-        # Track token usage if stats provided
-        if stats and "usage" in message:
-            stats.add_usage(message["usage"])
+        # Note: usage from individual assistant events is intentionally
+        # NOT tracked here. The authoritative totals come from the
+        # "result" event at the end of the session (see below).
 
         for item in content:
             item_type = item.get("type")
@@ -83,4 +83,26 @@ def process_stream_event(
                 if stats:
                     stats.add_tool_call(tool_name)
 
-    # Skip system events and tool_result events (too noisy)
+    elif event_type == "system":
+        # System event fires at session start — capture model for cost calc
+        if stats and not stats.model:
+            model = event.get("model", "")
+            if not model:
+                # Some formats nest under subtype=init
+                model = event.get("session", {}).get("model", "")
+            if model:
+                stats.model = model
+
+    elif event_type == "result":
+        # Result event fires once at end of session with authoritative
+        # totals for all API turns in this iteration
+        if stats and "usage" in event:
+            stats.add_usage(event["usage"])
+        # Capture cost if available
+        if stats and "total_cost_usd" in event:
+            stats.total_cost_usd += event["total_cost_usd"]
+        # Capture API turn count if available
+        if stats and "num_turns" in event:
+            stats.total_api_turns += event["num_turns"]
+
+    # Skip user and tool_result events (too noisy)
