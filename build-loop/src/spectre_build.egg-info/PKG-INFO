@@ -1,5 +1,0 @@
-Metadata-Version: 2.4
-Name: spectre-build
-Version: 1.0.0
-Summary: Automated task execution CLI for Claude Code
-Requires-Python: >=3.10

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+*.egg
+
+# Build loop runtime
+build_progress.md
+.spectre/
+
+# IDE
+.vscode/
+.idea/
