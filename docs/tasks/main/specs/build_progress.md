@@ -136,3 +136,16 @@
 - `plan_before_stage` sets `clarification_answers` to empty string when file is missing (not None) so template substitution doesn't break
 - `plan_after_stage` uses `setdefault` for depth/tier so it never overwrites values already in context from a previous stage
 **Blockers/Risks**: None
+
+## Iteration — [3.2] Add planning loop counters to stats
+**Status**: Complete
+**What Was Done**: Added `plan_loops: int = 0` field to `BuildStats` dataclass, conditional `PLAN LOOPS` line in the dashboard (only shown when `plan_loops > 0`), and a `create_plan_event_handler()` factory function in `stats.py` that returns an `on_event` callback incrementing `plan_loops` on every `StageCompletedEvent`. This factory is ready for `run_plan_pipeline()` (task 4.1) to wire into the `PipelineExecutor`. Added 6 unit tests covering field defaults, dashboard display/omission, and event handler behavior.
+**Files Changed**:
+- `build-loop/src/build_loop/stats.py` (added `plan_loops` field, `PLAN LOOPS` dashboard line, `create_plan_event_handler()` factory)
+- `build-loop/tests/test_plan_stats.py` (new, 6 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 3.2 complete)
+**Key Decisions**:
+- Created `create_plan_event_handler()` as a reusable factory in `stats.py` rather than an inline closure in `cli.py`, so `run_plan_pipeline()` (task 4.1) can import and use it directly
+- Handler increments `plan_loops` on any `StageCompletedEvent` (not filtered by stage name) since all stages in the planning pipeline are planning stages
+- `PLAN LOOPS` line is separate from the build/review/validate `LOOPS` line since they serve different pipelines
+**Blockers/Risks**: None
