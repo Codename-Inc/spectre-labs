@@ -52,3 +52,17 @@
 - Architecture design for COMPREHENSIVE is appended to existing task_context.md (not a separate file) so create_plan stage gets it automatically
 - Follows same style as research.md — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
 **Blockers/Risks**: None
+
+## Iteration — [2.3] Create plan generation prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `create_plan.md` prompt with a comprehensive autonomous plan generation template. The prompt guides the agent through 4 steps: read task context and scope docs, determine section depth based on `{depth}` variable (standard vs comprehensive) using a detail-level table, write the implementation plan to `{output_dir}/specs/plan.md` with required sections (Overview, Out of Scope, Technical Approach, Critical Files, Risks), and emit `PLAN_COMPLETE` JSON with `plan_path` artifact. Added 12 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/planning/create_plan.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_create_plan_prompt.py` (new, 12 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.3 complete)
+**Key Decisions**:
+- Depth-aware detail table maps standard/comprehensive to concrete section expectations (e.g., standard = 2-3 paragraphs overview, comprehensive = full system overview with diagrams)
+- Plan structure includes Out of Scope section to prevent scope creep during task breakdown
+- Writing rules require grounding claims in code references from task_context.md
+- Follows same style as research.md and assess.md — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
+**Blockers/Risks**: None
