@@ -385,3 +385,171 @@ def create_default_build_validate_pipeline(
         start_stage="build",
         end_signals=["COMPLETE", "BUILD_COMPLETE"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Planning Pipeline Denied Tools
+# ---------------------------------------------------------------------------
+
+# Standard denied tools for planning stages (same as build loop)
+PLAN_DENIED_TOOLS = [
+    "AskUserQuestion",
+    "WebFetch",
+    "WebSearch",
+    "Task",
+    "EnterPlanMode",
+    "NotebookEdit",
+]
+
+# Research stage gets WebSearch/WebFetch access for external docs
+PLAN_RESEARCH_DENIED_TOOLS = [
+    "AskUserQuestion",
+    "Task",
+    "EnterPlanMode",
+    "NotebookEdit",
+]
+
+
+def create_plan_pipeline() -> PipelineConfig:
+    """Create a planning pipeline: research -> assess -> [create_plan] -> create_tasks -> plan_review -> req_validate -> [update_docs].
+
+    The planning pipeline transforms scope documents into a build-ready manifest.
+    Complexity assessment (assess stage) determines routing:
+    - LIGHT: skips create_plan, goes straight to create_tasks
+    - STANDARD/COMPREHENSIVE: routes through create_plan first
+
+    The update_docs stage is included but only used via the resume pipeline
+    (create_plan_resume_pipeline). It's present here for completeness so
+    transitions can reference it.
+
+    Returns:
+        PipelineConfig for the 7-stage planning workflow.
+    """
+    prompts_dir = Path(__file__).parent.parent / "prompts" / "planning"
+
+    stages = {
+        "research": StageConfig(
+            name="research",
+            prompt_template=str(prompts_dir / "research.md"),
+            completion=JsonCompletion(
+                complete_statuses=["RESEARCH_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={"RESEARCH_COMPLETE": "assess"},
+            denied_tools=PLAN_RESEARCH_DENIED_TOOLS,
+        ),
+        "assess": StageConfig(
+            name="assess",
+            prompt_template=str(prompts_dir / "assess.md"),
+            completion=JsonCompletion(
+                complete_statuses=["LIGHT", "STANDARD", "COMPREHENSIVE"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={
+                "LIGHT": "create_tasks",
+                "STANDARD": "create_plan",
+                "COMPREHENSIVE": "create_plan",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "create_plan": StageConfig(
+            name="create_plan",
+            prompt_template=str(prompts_dir / "create_plan.md"),
+            completion=JsonCompletion(
+                complete_statuses=["PLAN_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={"PLAN_COMPLETE": "create_tasks"},
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "create_tasks": StageConfig(
+            name="create_tasks",
+            prompt_template=str(prompts_dir / "create_tasks.md"),
+            completion=JsonCompletion(
+                complete_statuses=["TASKS_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={"TASKS_COMPLETE": "plan_review"},
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "plan_review": StageConfig(
+            name="plan_review",
+            prompt_template=str(prompts_dir / "plan_review.md"),
+            completion=JsonCompletion(
+                complete_statuses=["REVIEW_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={"REVIEW_COMPLETE": "req_validate"},
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "req_validate": StageConfig(
+            name="req_validate",
+            prompt_template=str(prompts_dir / "req_validate.md"),
+            completion=JsonCompletion(
+                complete_statuses=["PLAN_VALIDATED", "CLARIFICATIONS_NEEDED"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={},
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "update_docs": StageConfig(
+            name="update_docs",
+            prompt_template=str(prompts_dir / "update_docs.md"),
+            completion=JsonCompletion(
+                complete_statuses=["PLAN_READY"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={},
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+    }
+
+    return PipelineConfig(
+        name="plan",
+        description="Planning pipeline: scope docs to build-ready manifest",
+        stages=stages,
+        start_stage="research",
+        end_signals=["PLAN_VALIDATED", "PLAN_READY"],
+    )
+
+
+def create_plan_resume_pipeline() -> PipelineConfig:
+    """Create a single-stage pipeline for post-clarification resume.
+
+    After the planning pipeline pauses for clarifications, this pipeline
+    runs only the update_docs stage to incorporate answers and produce
+    the final manifest.
+
+    Returns:
+        PipelineConfig with single update_docs stage.
+    """
+    prompts_dir = Path(__file__).parent.parent / "prompts" / "planning"
+
+    stages = {
+        "update_docs": StageConfig(
+            name="update_docs",
+            prompt_template=str(prompts_dir / "update_docs.md"),
+            completion=JsonCompletion(
+                complete_statuses=["PLAN_READY"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={},
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+    }
+
+    return PipelineConfig(
+        name="plan-resume",
+        description="Resume planning after clarifications",
+        stages=stages,
+        start_stage="update_docs",
+        end_signals=["PLAN_READY"],
+    )

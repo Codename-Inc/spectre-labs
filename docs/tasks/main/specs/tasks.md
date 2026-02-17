@@ -62,36 +62,36 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
 
 ### Phase 1: Pipeline Infrastructure
 
-#### [1.1] Create planning pipeline factory
-- [ ] **1.1.1** Add `create_plan_pipeline()` function to `pipeline/loader.py`
+#### [x] [1.1] Create planning pipeline factory
+- [x] **1.1.1** Add `create_plan_pipeline()` function to `pipeline/loader.py`
   - **Produces**: `PipelineConfig` with 7 stages (research, assess, create_plan, create_tasks, plan_review, req_validate, update_docs)
   - **Consumed by**: `run_plan_pipeline()` in `cli.py`
   - **Replaces**: N/A (new)
-  - [ ] Returns `PipelineConfig` with `start_stage="research"` and `end_signals=["PLAN_VALIDATED", "PLAN_READY"]`
-  - [ ] Assess stage transitions: `LIGHT→create_tasks`, `STANDARD→create_plan`, `COMPREHENSIVE→create_plan`
-  - [ ] All stages use `JsonCompletion` with stage-specific complete statuses
+  - [x] Returns `PipelineConfig` with `start_stage="research"` and `end_signals=["PLAN_VALIDATED", "PLAN_READY"]`
+  - [x] Assess stage transitions: `LIGHT→create_tasks`, `STANDARD→create_plan`, `COMPREHENSIVE→create_plan`
+  - [x] All stages use `JsonCompletion` with stage-specific complete statuses
 
-- [ ] **1.1.2** Configure research stage with expanded tool access
+- [x] **1.1.2** Configure research stage with expanded tool access
   - **Produces**: `StageConfig` for research stage with `denied_tools` excluding WebSearch/WebFetch
   - **Consumed by**: `create_plan_pipeline()` stage definitions
   - **Replaces**: N/A (new)
-  - [ ] Research stage `denied_tools` omits `WebSearch` and `WebFetch` (allowed for research only)
-  - [ ] All other stages use standard build loop denied tools list
+  - [x] Research stage `denied_tools` omits `WebSearch` and `WebFetch` (allowed for research only)
+  - [x] All other stages use standard build loop denied tools list
 
-- [ ] **1.1.3** Wire prompt template paths for all 7 stages
+- [x] **1.1.3** Wire prompt template paths for all 7 stages
   - **Produces**: Absolute paths to `prompts/planning/*.md` templates in each `StageConfig`
   - **Consumed by**: `Stage.load_template()` during execution
   - **Replaces**: N/A (new)
-  - [ ] Resolves paths relative to `prompts/planning/` directory using `Path(__file__).parent.parent / "prompts" / "planning"` pattern
-  - [ ] Each stage references its corresponding template file
+  - [x] Resolves paths relative to `prompts/planning/` directory using `Path(__file__).parent.parent / "prompts" / "planning"` pattern
+  - [x] Each stage references its corresponding template file
 
-#### [1.2] Create planning resume pipeline factory
-- [ ] **1.2.1** Add `create_plan_resume_pipeline()` function to `pipeline/loader.py`
+#### [x] [1.2] Create planning resume pipeline factory
+- [x] **1.2.1** Add `create_plan_resume_pipeline()` function to `pipeline/loader.py`
   - **Produces**: `PipelineConfig` with single `update_docs` stage
   - **Consumed by**: `run_plan_pipeline()` in `cli.py` (resume path)
   - **Replaces**: N/A (new)
-  - [ ] Single stage: `update_docs` with `JsonCompletion(complete_statuses=["PLAN_READY"])`
-  - [ ] `start_stage="update_docs"`, `end_signals=["PLAN_READY"]`
+  - [x] Single stage: `update_docs` with `JsonCompletion(complete_statuses=["PLAN_READY"])`
+  - [x] `start_stage="update_docs"`, `end_signals=["PLAN_READY"]`
 
 ### Phase 2: Prompt Templates
 
