@@ -80,3 +80,17 @@
 - Template handles LIGHT tier gracefully (plan file may not exist)
 - Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
 **Blockers/Risks**: None
+
+## Iteration — [2.5] Create plan review prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `plan_review.md` prompt with a comprehensive autonomous plan review template. The prompt guides the agent through 4 steps: read all inputs (plan, tasks, task context, scope docs), identify over-engineering across 4 categories (premature abstraction, YAGNI violations, unnecessary indirection, scope creep), apply simplifications by editing plan.md and tasks.md in-place (preserving all scope requirements), and emit `REVIEW_COMPLETE` JSON with `changes_summary`, `items_removed`, and `items_simplified` fields. Added 12 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/planning/plan_review.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_plan_review_prompt.py` (new, 12 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.5 complete)
+**Key Decisions**:
+- Added `{task_context_path}` and `{context_files}` variables so the agent can cross-reference simplifications against actual scope requirements and codebase patterns
+- Defined 4 concrete categories of over-engineering (premature abstraction, YAGNI, unnecessary indirection, scope creep) rather than vague "simplify" instructions
+- Explicit "What to preserve" section prevents the agent from removing requirements while simplifying
+- Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
+**Blockers/Risks**: None
