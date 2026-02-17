@@ -1,8 +1,9 @@
 """
 Stage lifecycle hooks for pipeline execution.
 
-Provides before_stage and after_stage callbacks that capture git state
-and inject review context between build and code review stages.
+Provides before_stage and after_stage callbacks for both the build pipeline
+(git scope injection between build and code review stages) and the planning
+pipeline (depth defaults, clarification injection, artifact flow).
 """
 
 import logging
@@ -107,3 +108,70 @@ def _set_review_fixes_path(context: dict[str, Any]) -> None:
     else:
         review_fixes = "review_fixes.md"
     context["review_fixes_path"] = review_fixes
+
+
+# ---------------------------------------------------------------------------
+# Planning Pipeline Hooks
+# ---------------------------------------------------------------------------
+
+
+def plan_before_stage(stage_name: str, context: dict[str, Any]) -> None:
+    """Hook called before each planning pipeline stage runs.
+
+    For create_plan stage: ensures depth is in context (defaults to 'standard').
+    For update_docs stage: reads clarifications file and injects content
+    as clarification_answers.
+
+    Args:
+        stage_name: Name of the stage about to run
+        context: Mutable pipeline context dictionary
+    """
+    if stage_name == "create_plan":
+        if "depth" not in context:
+            context["depth"] = "standard"
+            logger.info("Defaulted depth to 'standard' for create_plan stage")
+
+    elif stage_name == "update_docs":
+        clarif_path = context.get("clarifications_path")
+        if clarif_path and Path(clarif_path).exists():
+            context["clarification_answers"] = Path(clarif_path).read_text()
+            logger.info("Injected clarification answers from %s", clarif_path)
+        else:
+            context["clarification_answers"] = ""
+            if clarif_path:
+                logger.warning("Clarifications file not found: %s", clarif_path)
+            else:
+                logger.info("No clarifications_path in context for update_docs")
+
+
+def plan_after_stage(
+    stage_name: str,
+    context: dict[str, Any],
+    result: CompletionResult,
+) -> None:
+    """Hook called after each planning pipeline stage completes.
+
+    For assess stage: ensures depth and tier from artifacts flow into context.
+    For req_validate stage with CLARIFICATIONS_NEEDED: stores clarifications
+    path in context for session save.
+
+    Args:
+        stage_name: Name of the stage that just completed
+        context: Mutable pipeline context dictionary
+        result: CompletionResult from the stage
+    """
+    if stage_name == "assess":
+        context.setdefault("depth", result.artifacts.get("depth", "standard"))
+        context.setdefault("tier", result.artifacts.get("tier", "STANDARD"))
+        logger.info(
+            "Assess stage complete: depth=%s, tier=%s",
+            context["depth"],
+            context["tier"],
+        )
+
+    elif stage_name == "req_validate":
+        if result.signal == "CLARIFICATIONS_NEEDED":
+            clarif_path = result.artifacts.get("clarifications_path", "")
+            if clarif_path:
+                context["clarifications_path"] = clarif_path
+                logger.info("Clarifications needed, path: %s", clarif_path)

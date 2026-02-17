@@ -162,20 +162,20 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
 
 ### Phase 3: Hooks and Stats
 
-#### [3.1] Add planning-specific lifecycle hooks
-- [ ] **3.1.1** Implement `plan_before_stage()` in `hooks.py`
+#### [x] [3.1] Add planning-specific lifecycle hooks
+- [x] **3.1.1** Implement `plan_before_stage()` in `hooks.py`
   - **Produces**: Context dict mutations (depth defaults, clarification content injection)
   - **Consumed by**: `PipelineExecutor` calls this before each planning stage
   - **Replaces**: N/A (new, alongside existing `before_stage_hook`)
-  - [ ] For `create_plan` stage: ensures `depth` is in context (defaults to `"standard"`)
-  - [ ] For `update_docs` stage: reads clarifications file from `clarifications_path` and injects content as `clarification_answers`
+  - [x] For `create_plan` stage: ensures `depth` is in context (defaults to `"standard"`)
+  - [x] For `update_docs` stage: reads clarifications file from `clarifications_path` and injects content as `clarification_answers`
 
-- [ ] **3.1.2** Implement `plan_after_stage()` in `hooks.py`
+- [x] **3.1.2** Implement `plan_after_stage()` in `hooks.py`
   - **Produces**: Context dict enrichment from stage artifacts
   - **Consumed by**: `PipelineExecutor` calls this after each planning stage
   - **Replaces**: N/A (new, alongside existing `after_stage_hook`)
-  - [ ] For `assess` stage: ensures `depth` and `tier` from artifacts flow into context
-  - [ ] For `req_validate` stage with `CLARIFICATIONS_NEEDED`: stores clarifications path in context for session save
+  - [x] For `assess` stage: ensures `depth` and `tier` from artifacts flow into context
+  - [x] For `req_validate` stage with `CLARIFICATIONS_NEEDED`: stores clarifications path in context for session save
 
 #### [3.2] Add planning loop counters to stats
 - [ ] **3.2.1** Add `plan_loops` field to `BuildStats` and wire `on_event` callback
