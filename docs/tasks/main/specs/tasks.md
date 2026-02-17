@@ -215,20 +215,20 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] `--plan` without `--context` prints error and exits
   - [x] Sends notification on completion/error
 
-#### [4.2] Extend session persistence for planning
-- [ ] **4.2.1** Update `save_session()` and `load_session()` for planning state
+#### [x] [4.2] Extend session persistence for planning
+- [x] **4.2.1** Update `save_session()` and `load_session()` for planning state
   - **Produces**: Session JSON with `plan`, `plan_output_dir`, `plan_context`, `plan_clarifications_path` fields
   - **Consumed by**: `run_resume()` reads these to route to planning resume
   - **Replaces**: N/A (extends existing session schema)
-  - [ ] `save_session()` accepts new keyword args: `plan`, `plan_output_dir`, `plan_context`, `plan_clarifications_path`
-  - [ ] Session JSON includes all planning-specific fields when `plan=True`
+  - [x] `save_session()` accepts new keyword args: `plan`, `plan_output_dir`, `plan_context`, `plan_clarifications_path`
+  - [x] Session JSON includes all planning-specific fields when `plan=True`
 
-- [ ] **4.2.2** Update `format_session_summary()` for planning display
+- [x] **4.2.2** Update `format_session_summary()` for planning display
   - **Produces**: Human-readable session summary showing planning state
   - **Consumed by**: `run_resume()` displays this before confirmation
   - **Replaces**: N/A (extends existing format)
-  - [ ] Shows "Mode: Planning" and stage info
-  - [ ] Shows clarifications path if paused for clarifications
+  - [x] Shows "Mode: Planning" and stage info
+  - [x] Shows clarifications path if paused for clarifications
 
 #### [4.3] Wire planning resume flow
 - [ ] **4.3.1** Update `run_resume()` to handle planning sessions

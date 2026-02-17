@@ -88,8 +88,12 @@ def format_session_summary(session: dict) -> str:
     """Format session details for confirmation prompt."""
     lines = [
         f"  Agent:      {session.get('agent', 'claude')}",
-        f"  Tasks:      {session['tasks_file']}",
     ]
+
+    if session.get("plan"):
+        lines.append("  Mode:       Planning")
+    else:
+        lines.append(f"  Tasks:      {session['tasks_file']}")
 
     if session.get("context_files"):
         for i, ctx in enumerate(session["context_files"]):
@@ -108,6 +112,12 @@ def format_session_summary(session: dict) -> str:
 
     if session.get("pipeline_path"):
         lines.append(f"  Pipeline:   {session['pipeline_path']}")
+
+    if session.get("plan_output_dir"):
+        lines.append(f"  Output:     {session['plan_output_dir']}")
+
+    if session.get("plan_clarifications_path"):
+        lines.append(f"  Clarif:     {session['plan_clarifications_path']}")
 
     if session.get("started_at"):
         lines.append(f"  Last run:   {session['started_at']}")
