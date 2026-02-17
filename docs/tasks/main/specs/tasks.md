@@ -132,14 +132,14 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] Generates hierarchical task breakdown (Phase → Parent → Sub-task → Acceptance Criteria)
   - [x] Emits JSON with `"status": "TASKS_COMPLETE"` and `"tasks_path"` artifact
 
-#### [2.5] Create plan review prompt
-- [ ] **2.5.1** Write `prompts/planning/plan_review.md` template
+#### [x] [2.5] Create plan review prompt
+- [x] **2.5.1** Write `prompts/planning/plan_review.md` template
   - **Produces**: Updated `plan.md` and `tasks.md` with simplifications applied
   - **Consumed by**: Req_validate stage reads simplified plan and tasks
   - **Replaces**: Adapted from interactive `/spectre:plan_review`
-  - [ ] Reads `{plan_path}` and `{tasks_path}`, identifies over-engineering and unnecessary abstractions
-  - [ ] Edits files in-place to apply simplifications (removes complexity, not requirements)
-  - [ ] Emits JSON with `"status": "REVIEW_COMPLETE"` and summary of changes made
+  - [x] Reads `{plan_path}` and `{tasks_path}`, identifies over-engineering and unnecessary abstractions
+  - [x] Edits files in-place to apply simplifications (removes complexity, not requirements)
+  - [x] Emits JSON with `"status": "REVIEW_COMPLETE"` and summary of changes made
 
 #### [2.6] Create requirements validation prompt
 - [ ] **2.6.1** Write `prompts/planning/req_validate.md` template
