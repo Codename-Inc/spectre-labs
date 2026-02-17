@@ -123,3 +123,16 @@
 - Explicit guardrails prevent re-researching codebase, writing code, removing existing requirements, or creating new clarification questions
 - Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
 **Blockers/Risks**: None
+
+## Iteration — [3.1] Add planning-specific lifecycle hooks
+**Status**: Complete
+**What Was Done**: Implemented `plan_before_stage()` and `plan_after_stage()` hooks in `hooks.py`. The before hook defaults `depth` to `"standard"` for `create_plan` stage and reads/injects clarification file content for `update_docs` stage. The after hook extracts `depth`/`tier` from assess stage artifacts into context (with safe defaults) and stores `clarifications_path` when `req_validate` emits `CLARIFICATIONS_NEEDED`. Both hooks are no-ops for unrelated stages. Added 11 unit tests covering all happy/failure paths.
+**Files Changed**:
+- `build-loop/src/build_loop/hooks.py` (added `plan_before_stage`, `plan_after_stage`, updated module docstring)
+- `build-loop/tests/test_plan_hooks.py` (new, 11 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 3.1 complete)
+**Key Decisions**:
+- Planning hooks are separate functions from build hooks (not merged into existing `before_stage_hook`/`after_stage_hook`) so each pipeline can wire its own hooks independently
+- `plan_before_stage` sets `clarification_answers` to empty string when file is missing (not None) so template substitution doesn't break
+- `plan_after_stage` uses `setdefault` for depth/tier so it never overwrites values already in context from a previous stage
+**Blockers/Risks**: None
