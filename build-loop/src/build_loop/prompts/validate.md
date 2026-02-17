@@ -6,6 +6,21 @@ You are running as a post-build validation step after a build loop completed. Va
 
 {arguments}
 
+## Validation Scope
+
+**Phase to Validate**: {phase_completed}
+**Already Validated**: {validated_phases}
+
+### Completed Tasks in This Phase
+
+{completed_phase_tasks}
+
+**CRITICAL scope rules**:
+- Validate ONLY the tasks listed above.
+- If "Phase to Validate" is "all", validate all tasks in the tasks file.
+- Do NOT validate tasks from other phases.
+- Do NOT re-validate phases listed under "Already Validated".
+
 ## Core Validation Principle
 
 > **"Definition ≠ Connection ≠ Reachability"**
@@ -32,7 +47,7 @@ When verifying any implementation:
 
 - **Action** — ChunkIntoValidationAreas: Break scope into discrete validation areas.
 
-  - **From tasks.md**: Each parent task (e.g., \[1.1\], \[1.2\]) = one validation area
+  - **From the Completed Tasks in This Phase section above**: Each parent task (e.g., \[1.1\], \[1.2\]) = one validation area
   - **From scope.md**: Each "In Scope" item = one validation area
   - Aim for 3-8 validation areas (merge small items, split large ones)
 
@@ -182,11 +197,13 @@ When verifying any implementation:
   >
   > {1-2 sentence summary of key findings}
 
+- **Action** — ReadTasksFile: Before choosing a status, read the tasks file and check parent task checkboxes.
+
 - **Action** — OutputJSON: **CRITICAL** - Output a JSON block at the very end of your response that the build loop will parse:
 
   ```json
   {
-    "status": "COMPLETE" | "GAPS_FOUND",
+    "status": "ALL_VALIDATED" | "VALIDATED" | "GAPS_FOUND",
     "gaps_file": "/absolute/path/to/validation_gaps.md" | null,
     "summary": "Brief 1-2 sentence summary",
     "stats": {
@@ -198,11 +215,15 @@ When verifying any implementation:
   ```
 
   **Rules:**
-  - `status`: Use `"COMPLETE"` if all requirements verified, `"GAPS_FOUND"` if gaps exist
-  - `gaps_file`: Absolute path to the validation_gaps.md file you created, or `null` if status is COMPLETE
+  - `status`: Choose based on validation results and remaining work:
+    - `"ALL_VALIDATED"` — Current phase verified correct AND no remaining phases (i.e., `{remaining_phases}` is "None"). The entire build is done.
+    - `"VALIDATED"` — Current phase verified correct, but remaining phases exist. Pipeline continues with next phase.
+    - `"GAPS_FOUND"` — Gaps exist in the current phase's work that need remediation.
+  - `gaps_file`: Absolute path to the validation_gaps.md file you created, or `null` if status is ALL_VALIDATED or VALIDATED
   - The JSON must be valid and parseable
   - Place it in a ```json code block at the very end of your response
 
   The outer build loop parses this JSON to determine next steps:
-  - `COMPLETE` → Feature is done, build loop ends
+  - `ALL_VALIDATED` → All tasks done and verified, pipeline ends
+  - `VALIDATED` → Current work verified, pipeline continues with remaining tasks
   - `GAPS_FOUND` → Another build cycle will run using the `gaps_file` as the new tasks file

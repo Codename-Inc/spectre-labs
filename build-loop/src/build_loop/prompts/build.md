@@ -46,18 +46,40 @@ Read and understand the current state before doing any work.
    - Parent tasks marked `[x]` are complete
    - Parent tasks marked `[ ]` are incomplete
 
+4. **Check for review fixes** (if `{review_fixes_path}` exists)
+
+   - If this file exists, a code review requested changes
+   - Read it and address those issues **first** before continuing with new tasks
+   - Delete the file after all fixes are applied
+
+5. **Check for validation remediation tasks** (if `{remediation_tasks_path}` exists)
+
+   - If this file exists, a validation pass found gaps in completed work
+   - Read it — it contains specific remediation tasks with acceptance criteria
+   - These tasks **override** normal task selection: work on remediation tasks **instead of** the tasks file
+   - After all remediation tasks are complete, delete the file
+
 ---
 
 ## STEP 2: Task Planning
 
+**Remediation mode**: If a validation remediation file exists (Step 1.5), select a task from that file instead of the tasks file. Complete one remediation task per iteration. When all remediation tasks are done, delete the file and emit `BUILD_COMPLETE`.
+
+**Normal mode**: If no remediation file exists, proceed with normal task selection:
+
+**Phase Identification**: If the tasks file is organized into phases (sections with `## Phase N: ...` headers), identify which phase you are in:
+- Find the first phase that still has incomplete `[ ]` parent tasks
+- Work only on tasks within the current phase
+- If the tasks file has no phase headers, treat all tasks as a single phase
+
 Select **exactly ONE** incomplete parent task to work on.
 
-- Usually this is the next sequential task
+- Usually this is the next sequential task within the current phase
 - Use judgment if dependencies have shifted or a task is blocked
 - If a task is obsolete, mark it `[x]` with "Skipped - {{reason}}" and select another
 - You will execute ONE task — the loop handles the rest
 
-**Output**: Clearly state which parent task you are working on.
+**Output**: Clearly state which parent task (and which phase, if applicable) you are working on.
 
 ---
 
@@ -137,8 +159,27 @@ You have completed ONE parent task. Your iteration is DONE.
 
 Output the promise tag and **end your response immediately**:
 
-- More tasks remain → `[[PROMISE:TASK_COMPLETE]]`
-- All tasks complete → `[[PROMISE:BUILD_COMPLETE]]`
+- More tasks remain in current phase → `[[PROMISE:TASK_COMPLETE]]`
+- Last task in current phase done, more phases remain → `[[PROMISE:PHASE_COMPLETE]]`
+- All tasks in all phases complete → `[[PROMISE:BUILD_COMPLETE]]`
+
+**Phase rules**: If the tasks file has no phase headers, never emit `PHASE_COMPLETE` — use only `TASK_COMPLETE` or `BUILD_COMPLETE`.
+
+**Phase metadata**: When you emit `PHASE_COMPLETE` or `BUILD_COMPLETE`, also output a JSON block with phase context for the next stage:
+
+```json
+{
+  "phase_completed": "Phase 1: Data Layer",
+  "completed_phase_tasks": "- [x] 1.1 Create models.py with Todo dataclass\n- [x] 1.2 Create store.py with add/list/complete",
+  "remaining_phases": "Phase 2: CLI Layer"
+}
+```
+
+- `phase_completed`: The phase you just finished (or "all" if no phases)
+- `completed_phase_tasks`: The parent tasks you completed in this phase, as a markdown checklist
+- `remaining_phases`: Comma-separated names of phases not yet started, or "None"
+
+Do NOT output this JSON for `TASK_COMPLETE` — only at phase/build boundaries.
 
 **Do NOT:**
 

@@ -1,0 +1,92 @@
+{
+  "version": "1.1",
+  "timestamp": "2026-02-09-182513",
+  "branch_name": "main",
+  "task_name": "Code Review Cycles + Phase Awareness for spectre-build",
+  "session_number": 2,
+  "continuity": {
+    "started": "2026-02-08",
+    "sessions_reviewed": 1,
+    "arc_goal": "Build a multi-stage build loop with code review, validation, and phase-aware execution that can handle multi-phase task plans with proper scoping at each stage"
+  },
+  "progress_update": {
+    "summary": "We implemented the full 3-stage pipeline (build → code_review → validate) with executor hooks, git scope injection, phase-aware signals, and CLI routing. Then identified a gap: validate and code review aren't scoped to the current phase — they process the entire tasks file. We designed a plan for phase-scoped validation using a new phase_parser.py module and context injection via hooks, but haven't implemented it yet.",
+    "goal": "Build a multi-stage build loop with code review, validation, and phase-aware execution that can handle multi-phase task plans with proper scoping at each stage",
+    "accomplished": [
+      "Added before_stage/after_stage hooks to PipelineExecutor (executor.py)",
+      "Created git_scope.py for capturing diffs between stages (snapshot_head, collect_diff, format_file_list, format_commits)",
+      "Created hooks.py with lifecycle hooks that inject changed_files/commit_messages into context for code review",
+      "Updated build.md prompt with PHASE_COMPLETE signal, phase identification, and review fixes awareness",
+      "Rewrote code_review.md prompt with scope injection, severity scale, YAGNI/KISS, structured JSON output",
+      "Updated validate.md with ALL_VALIDATED/VALIDATED/GAPS_FOUND signals",
+      "Added create_default_pipeline() factory in loader.py for 3-stage pipeline",
+      "Added build_loops/review_loops/validate_loops counters to BuildStats with LOOPS dashboard line",
+      "Created run_default_pipeline() in cli.py and routed --validate through it in main(), run_resume(), run_manifest()",
+      "Updated YAML pipeline files with new signals and transitions",
+      "Created E2E test fixtures (multi-phase and single-phase tasks)",
+      "Updated README.md, CLAUDE.md, feature skills, and registry"
+    ],
+    "now": "Designed but NOT YET IMPLEMENTED the phase-scoped validation fix. Plan is at /Users/joe/.claude/plans/rippling-wishing-forest.md. The plan creates phase_parser.py, updates hooks.py to inject phase context, updates validate.md and code_review.md to scope their work to the current phase, and fixes the missing {arguments} variable bug in the pipeline path.",
+    "next_steps": [
+      "Implement phase_parser.py (parse_phases, get_completed_phase)",
+      "Update hooks.py with _inject_phase_context and _track_validated_phase",
+      "Update cli.py context defaults (add arguments key, phase defaults)",
+      "Update validate.md with Validation Scope section",
+      "Update code_review.md with Phase Context section",
+      "Verify with import tests and template substitution tests"
+    ],
+    "confidence": "high",
+    "constraints": [
+      "System python lacks yaml/pydantic — use pipx venv for testing",
+      "Bash hook blocks rm — use python os.unlink() as workaround",
+      "Skills at .claude/skills/ and build-loop/.claude/skills/ — update BOTH",
+      "Prompt template variables must match exactly",
+      "Promise tag format must be [[PROMISE:TAG_NAME]]",
+      "Session JSON structure must remain compatible with resume logic"
+    ],
+    "decisions": [
+      "Token usage sourced exclusively from result events (not assistant events)",
+      "Cost calculated from token breakdowns using model pricing",
+      "Stats aggregation: single BuildStats instance flows through all cycles",
+      "Code review is a pipeline stage (not per-iteration)",
+      "Phase awareness implemented via pipeline executor hooks (not in prompts)",
+      "Phase parsing happens in after_stage_hook (not in prompts) — deterministic, reads ground truth from tasks file",
+      "Single-phase files (no ## Phase headers) get current_phase_name='all' — identical to current behavior",
+      "Validated phases tracked via _validated_phase_numbers list in context dict — persists across pipeline cycles within one run"
+    ],
+    "blockers": [],
+    "open_questions": [],
+    "risks": [
+      "Model pricing in stats.py is hardcoded — will need updating when Anthropic changes prices",
+      "Phase header format variations (### Phase vs ## Phase) could cause parsing misses — mitigated by standardizing on ## Phase N: in build.md prompt"
+    ]
+  },
+  "working_set": {
+    "key_files": [
+      "build-loop/src/build_loop/hooks.py",
+      "build-loop/src/build_loop/git_scope.py",
+      "build-loop/src/build_loop/pipeline/executor.py",
+      "build-loop/src/build_loop/pipeline/loader.py",
+      "build-loop/src/build_loop/pipeline/__init__.py",
+      "build-loop/src/build_loop/stats.py",
+      "build-loop/src/build_loop/cli.py",
+      "build-loop/src/build_loop/prompts/build.md",
+      "build-loop/src/build_loop/prompts/code_review.md",
+      "build-loop/src/build_loop/prompts/validate.md",
+      "build-loop/.spectre/pipelines/full-feature.yaml",
+      ".spectre/pipelines/demo-full-feature.yaml",
+      "CLAUDE.md",
+      ".claude/skills/feature-build-loop/SKILL.md"
+    ],
+    "active_ids": [],
+    "recent_commands": [
+      "pipx install -e . --force",
+      "pipx inject spectre-build pyyaml pydantic",
+      "/Users/joe/.local/pipx/venvs/spectre-build/bin/python -c '...import tests...'"
+    ]
+  },
+  "context": {
+    "wip_state": "uncommitted",
+    "last_commit": "a2ac4fd"
+  }
+}

@@ -228,6 +228,93 @@ def load_pipeline_from_dict(data: dict[str, Any], base_path: Path | None = None)
     return schema.to_config(base_path)
 
 
+def create_default_pipeline(
+    tasks_file: str,
+    context_files: list[str] | None = None,
+    build_prompt_path: str | None = None,
+    code_review_prompt_path: str | None = None,
+    validate_prompt_path: str | None = None,
+    max_build_iterations: int = 10,
+) -> PipelineConfig:
+    """Create a default build -> code_review -> validate pipeline.
+
+    This is the recommended pipeline for builds with --validate.
+    Includes code review between build and validation with
+    phase-aware signals.
+
+    Args:
+        tasks_file: Path to the tasks file
+        context_files: Optional list of context file paths
+        build_prompt_path: Optional custom build prompt template path
+        code_review_prompt_path: Optional custom code review prompt path
+        validate_prompt_path: Optional custom validate prompt template path
+        max_build_iterations: Max iterations for the build stage
+
+    Returns:
+        PipelineConfig for build -> code_review -> validate workflow
+    """
+    prompts_dir = Path(__file__).parent.parent / "prompts"
+    build_prompt = build_prompt_path or str(prompts_dir / "build.md")
+    review_prompt = code_review_prompt_path or str(prompts_dir / "code_review.md")
+    validate_prompt = validate_prompt_path or str(prompts_dir / "validate.md")
+
+    stages = {
+        "build": StageConfig(
+            name="build",
+            prompt_template=build_prompt,
+            completion=PromiseCompletion(
+                complete_signals=["TASK_COMPLETE", "PHASE_COMPLETE", "BUILD_COMPLETE"],
+                extract_artifacts=True,
+            ),
+            max_iterations=max_build_iterations,
+            transitions={
+                "TASK_COMPLETE": "build",
+                "PHASE_COMPLETE": "code_review",
+                "BUILD_COMPLETE": "code_review",
+            },
+        ),
+        "code_review": StageConfig(
+            name="code_review",
+            prompt_template=review_prompt,
+            completion=JsonCompletion(
+                complete_statuses=["APPROVED", "CHANGES_REQUESTED"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={
+                "APPROVED": "validate",
+                "CHANGES_REQUESTED": "build",
+            },
+        ),
+        "validate": StageConfig(
+            name="validate",
+            prompt_template=validate_prompt,
+            completion=CompositeCompletion([
+                JsonCompletion(
+                    complete_statuses=["ALL_VALIDATED", "VALIDATED", "GAPS_FOUND"],
+                    signal_field="status",
+                ),
+                PromiseCompletion(
+                    complete_signals=["VALIDATION:ALL_VALIDATED", "VALIDATION:VALIDATED", "VALIDATION:GAPS_FOUND"],
+                ),
+            ]),
+            max_iterations=1,
+            transitions={
+                "VALIDATED": "build",
+                "GAPS_FOUND": "build",
+            },
+        ),
+    }
+
+    return PipelineConfig(
+        name="build-review-validate",
+        description="Build with code review and phase-aware validation",
+        stages=stages,
+        start_stage="build",
+        end_signals=["ALL_VALIDATED"],
+    )
+
+
 def create_default_build_validate_pipeline(
     tasks_file: str,
     context_files: list[str] | None = None,

@@ -77,36 +77,55 @@ build-loop/
 ├── pyproject.toml
 └── src/build_loop/
     ├── __init__.py      # Package entry point (main function)
-    ├── cli.py           # CLI arg parsing, interactive prompts
-    ├── loop.py          # Core iteration loop
+    ├── cli.py           # CLI arg parsing, routing, run_default_pipeline
+    ├── loop.py          # Core iteration loop (legacy build-only path)
+    ├── hooks.py         # Stage lifecycle hooks (git scope injection)
+    ├── git_scope.py     # Git diff utilities for inter-stage context
     ├── prompt.py        # Template loading
-    ├── stats.py         # BuildStats dataclass
+    ├── stats.py         # BuildStats dataclass (with loop counters)
     ├── stream.py        # Stream-JSON parsing
     ├── notify.py        # macOS notifications
-    └── prompts/build.md # Iteration template
+    ├── pipeline/        # Stage-based pipeline executor
+    │   ├── executor.py  # PipelineExecutor with before/after hooks
+    │   ├── stage.py     # Stage iteration + completion detection
+    │   ├── completion.py # Promise/JSON/Composite strategies
+    │   └── loader.py    # YAML loading + create_default_pipeline()
+    └── prompts/
+        ├── build.md         # Build iteration (phase-aware)
+        ├── code_review.md   # Code review with scope injection
+        └── validate.md      # Validation with D!=C!=R
 ```
 
 ### Build Loop Module Dependencies
 
 ```
-cli.py → loop.py, notify.py
+cli.py → loop.py, notify.py, hooks.py, pipeline/
+hooks.py → git_scope.py, pipeline/completion.py
 loop.py → prompt.py, stats.py, stream.py
+pipeline/executor.py → pipeline/stage.py, stats.py
+pipeline/loader.py → pipeline/completion.py, pipeline/executor.py, pipeline/stage.py
 prompt.py → prompts/build.md (template file)
 stream.py → stats.py (updates BuildStats during event processing)
 ```
 
-### Core Execution Flow (loop.py)
+### Core Execution Flow
 
-1. Display configuration (tasks file, context, max iterations)
-2. For each iteration:
-   - Build prompt from template + current task state
-   - Run `claude` CLI subprocess with tool allowlist/denylist
-   - Parse stream-JSON output in real time
-   - Detect promise tags (`[[PROMISE:TASK_COMPLETE]]` or `[[PROMISE:BUILD_COMPLETE]]`)
-   - Continue or exit based on promise
-3. Print summary statistics
+**With --validate (default pipeline):**
+1. `cli.py:run_default_pipeline()` creates 3-stage pipeline (build/code_review/validate)
+2. `PipelineExecutor` runs stages with lifecycle hooks:
+   - `before_stage_hook`: Snapshots HEAD before build
+   - Build stage iterates tasks, emits TASK_COMPLETE/PHASE_COMPLETE/BUILD_COMPLETE
+   - `after_stage_hook`: Collects git diff, injects into context
+   - Code review reads changed files, emits APPROVED/CHANGES_REQUESTED
+   - Validate checks D!=C!=R, emits ALL_VALIDATED/VALIDATED/GAPS_FOUND
+3. Pipeline ends on ALL_VALIDATED signal
 
-### Tool Filtering (loop.py lines 18-42)
+**Without --validate (legacy):**
+1. `run_build_validate_cycle()` with validate=False
+2. Simple build loop via `loop.py`, one task per iteration
+3. Promise tags control flow
+
+### Tool Filtering (loop.py)
 
 **Allowed**: Bash, Read, Write, Edit, Glob, Grep, LS, TodoRead, TodoWrite
 
@@ -117,8 +136,9 @@ Denied tools are blocked to prevent the loop from hanging (network calls, intera
 ### Promise-Based Flow Control
 
 Claude signals completion via promise tags in output:
-- `[[PROMISE:TASK_COMPLETE]]` - Task done, more tasks remain
-- `[[PROMISE:BUILD_COMPLETE]]` - All tasks done, exit loop
+- `[[PROMISE:TASK_COMPLETE]]` - Task done, more tasks in current phase
+- `[[PROMISE:PHASE_COMPLETE]]` - Phase done, more phases remain
+- `[[PROMISE:BUILD_COMPLETE]]` - All tasks done
 
 Detected by regex: `\[\[PROMISE:(.*?)\]\]`
 
@@ -158,17 +178,28 @@ Knowledge stored in `{{project_root}}/.claude/skills/` with registry at `sparks-
 
 | File | Purpose |
 |------|---------|
-| `build-loop/src/build_loop/cli.py` | CLI arg parsing, interactive prompts, session I/O |
-| `build-loop/src/build_loop/loop.py` | Core iteration loop, subprocess management, promise detection |
+| `build-loop/src/build_loop/cli.py` | CLI routing, run_default_pipeline, session I/O |
+| `build-loop/src/build_loop/loop.py` | Core iteration loop (legacy build-only path) |
+| `build-loop/src/build_loop/hooks.py` | Stage lifecycle hooks (git scope injection) |
+| `build-loop/src/build_loop/git_scope.py` | Git diff utilities for inter-stage context |
 | `build-loop/src/build_loop/prompt.py` | Template loading and variable substitution |
-| `build-loop/src/build_loop/stats.py` | BuildStats dataclass, summary dashboard |
+| `build-loop/src/build_loop/stats.py` | BuildStats dataclass, loop counters, dashboard |
 | `build-loop/src/build_loop/stream.py` | Stream-JSON parsing, formatted output |
 | `build-loop/src/build_loop/notify.py` | macOS/cross-platform notifications |
-| `build-loop/src/build_loop/prompts/build.md` | 6-step iteration prompt template |
+| `build-loop/src/build_loop/pipeline/executor.py` | PipelineExecutor with before/after hooks |
+| `build-loop/src/build_loop/pipeline/loader.py` | YAML loading, create_default_pipeline() |
+| `build-loop/src/build_loop/prompts/build.md` | Phase-aware build iteration prompt |
+| `build-loop/src/build_loop/prompts/code_review.md` | Code review with scope injection |
+| `build-loop/src/build_loop/prompts/validate.md` | Validation with D!=C!=R principle |
 
 ## Constraints
 
-- **Prompt template variables**: `{tasks_file_path}`, `{progress_file_path}`, `{additional_context_paths_or_none}` - must match exactly
-- **Promise tag format**: Must be exactly `[[PROMISE:TASK_COMPLETE]]` or `[[PROMISE:BUILD_COMPLETE]]`
+- **Prompt template variables**: `{tasks_file_path}`, `{progress_file_path}`, `{additional_context_paths_or_none}`, `{remediation_tasks_path}` - must match exactly
+- **Code review variables**: `{changed_files}`, `{commit_messages}`, `{review_fixes_path}`, `{phase_completed}`, `{validated_phases}` - injected by hooks.py and build artifacts
+- **Validate variables**: `{phase_completed}`, `{completed_phase_tasks}`, `{remaining_phases}`, `{validated_phases}`, `{arguments}` - from build artifacts and cli.py defaults
+- **Promise tag format**: `[[PROMISE:TASK_COMPLETE]]`, `[[PROMISE:PHASE_COMPLETE]]`, or `[[PROMISE:BUILD_COMPLETE]]`
+- **Phase metadata**: Build agent outputs JSON block with `phase_completed`, `completed_phase_tasks`, `remaining_phases` alongside PHASE_COMPLETE/BUILD_COMPLETE signals. Extracted by `PromiseCompletion(extract_artifacts=True)`
+- **Validate signals**: `ALL_VALIDATED`, `VALIDATED`, `GAPS_FOUND` — in JSON status field
+- **GAPS_FOUND flow**: Validate sets `remediation_tasks_path` in context → build prompt tells agent to work on remediation file instead of tasks file
 - **Session JSON structure**: Must remain compatible with resume logic in cli.py
 - **Sparks registry format**: `skill-name|category|triggers|description` (one per line)

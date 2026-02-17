@@ -12,7 +12,7 @@ from .completion import (
     PromiseCompletion,
 )
 from .executor import PipelineExecutor, PipelineState
-from .loader import load_pipeline
+from .loader import create_default_pipeline, load_pipeline
 from .stage import Stage, StageConfig
 
 __all__ = [
@@ -24,5 +24,6 @@ __all__ = [
     "StageConfig",
     "PipelineExecutor",
     "PipelineState",
+    "create_default_pipeline",
     "load_pipeline",
 ]

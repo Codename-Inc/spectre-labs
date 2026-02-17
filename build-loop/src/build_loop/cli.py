@@ -533,6 +533,99 @@ def run_pipeline(
         return 1, state.total_iterations
 
 
+def run_default_pipeline(
+    tasks_file: str,
+    context_files: list[str],
+    max_iterations: int,
+    agent: str = "claude",
+) -> tuple[int, int]:
+    """Run the default build -> code_review -> validate pipeline.
+
+    Creates a 3-stage pipeline with lifecycle hooks for git scope
+    injection between build and code review stages.
+
+    Args:
+        tasks_file: Absolute path to the tasks file
+        context_files: List of absolute paths to context files
+        max_iterations: Maximum iterations for the build stage
+        agent: Agent backend to use
+
+    Returns:
+        Tuple of (exit_code, total_iterations_completed)
+    """
+    from .agent import get_agent
+    from .hooks import after_stage_hook, before_stage_hook
+    from .pipeline.executor import PipelineExecutor, PipelineStatus, StageCompletedEvent
+    from .pipeline.loader import create_default_pipeline
+    from .stats import BuildStats
+
+    # Create pipeline config
+    config = create_default_pipeline(
+        tasks_file=tasks_file,
+        context_files=context_files,
+        max_build_iterations=max_iterations,
+    )
+
+    # Build context for prompt substitution
+    if context_files:
+        context_str = "\n".join(f"- `{f}`" for f in context_files)
+    else:
+        context_str = "None"
+
+    context = {
+        "tasks_file_path": tasks_file,
+        "progress_file_path": str(Path(tasks_file).parent / "build_progress.md"),
+        "additional_context_paths_or_none": context_str,
+        "review_fixes_path": str(Path(tasks_file).parent / "review_fixes.md"),
+        "changed_files": "No files changed (first run)",
+        "commit_messages": "No commits (first run)",
+        "phase_completed": "all",
+        "completed_phase_tasks": "(determined after build completes)",
+        "remaining_phases": "None",
+        "validated_phases": "None",
+        "remediation_tasks_path": "",
+        "arguments": f"Tasks file: `{tasks_file}`\nContext files:\n{context_str}",
+    }
+
+    # Get agent runner
+    runner = get_agent(agent)
+    if not runner.check_available():
+        print(f"❌ ERROR: {runner.name} CLI not found", file=sys.stderr)
+        return 127, 0
+
+    # Stats with event-based loop counting
+    stats = BuildStats()
+
+    def on_event(event):
+        if isinstance(event, StageCompletedEvent):
+            if event.stage == "build":
+                stats.build_loops += 1
+            elif event.stage == "code_review":
+                stats.review_loops += 1
+            elif event.stage == "validate":
+                stats.validate_loops += 1
+
+    # Create and run executor with hooks
+    executor = PipelineExecutor(
+        config=config,
+        runner=runner,
+        on_event=on_event,
+        context=context,
+        before_stage=before_stage_hook,
+        after_stage=after_stage_hook,
+    )
+
+    state = executor.run(stats)
+
+    # Return based on pipeline status
+    if state.status == PipelineStatus.COMPLETED:
+        return 0, state.total_iterations
+    elif state.status == PipelineStatus.STOPPED:
+        return 130, state.total_iterations
+    else:
+        return 1, state.total_iterations
+
+
 def run_resume(args: argparse.Namespace) -> None:
     """Handle the 'resume' subcommand."""
     import time
@@ -585,10 +678,14 @@ def run_resume(args: argparse.Namespace) -> None:
         exit_code, iterations_completed = run_pipeline(
             pipeline_path, tasks_file, context_files, agent=agent
         )
+    elif validate:
+        exit_code, iterations_completed = run_default_pipeline(
+            tasks_file, context_files, max_iterations, agent=agent
+        )
     else:
         exit_code, iterations_completed = run_build_validate_cycle(
             tasks_file, context_files, max_iterations,
-            agent=agent, validate=validate
+            agent=agent, validate=False
         )
 
     # Calculate duration
@@ -648,11 +745,16 @@ def run_manifest(manifest_path: str, args: argparse.Namespace) -> None:
     # Track build duration
     start_time = time.time()
 
-    # Run build with recursive validation
-    exit_code, iterations_completed = run_build_validate_cycle(
-        tasks_file, context_files, max_iterations,
-        agent=agent, validate=validate
-    )
+    # Run build with appropriate mode
+    if validate:
+        exit_code, iterations_completed = run_default_pipeline(
+            tasks_file, context_files, max_iterations, agent=agent
+        )
+    else:
+        exit_code, iterations_completed = run_build_validate_cycle(
+            tasks_file, context_files, max_iterations,
+            agent=agent, validate=False
+        )
 
     # Calculate duration
     duration = time.time() - start_time
@@ -773,7 +875,7 @@ def main() -> None:
 
     # Check for pipeline mode
     if args.pipeline:
-        # Pipeline mode - use pipeline executor
+        # Explicit pipeline YAML - use pipeline executor
         pipeline_path = str(Path(args.pipeline).resolve())
         save_session(tasks_file, context_files, max_iterations, agent=agent,
                      validate=validate, pipeline_path=pipeline_path)
@@ -781,13 +883,20 @@ def main() -> None:
         exit_code, iterations_completed = run_pipeline(
             pipeline_path, tasks_file, context_files, agent=agent
         )
+    elif validate:
+        # --validate without --pipeline → default 3-stage pipeline
+        save_session(tasks_file, context_files, max_iterations, agent=agent, validate=validate)
+
+        exit_code, iterations_completed = run_default_pipeline(
+            tasks_file, context_files, max_iterations, agent=agent
+        )
     else:
-        # Legacy mode - use build_validate_cycle
+        # No validation - legacy build-only mode
         save_session(tasks_file, context_files, max_iterations, agent=agent, validate=validate)
 
         exit_code, iterations_completed = run_build_validate_cycle(
             tasks_file, context_files, max_iterations,
-            agent=agent, validate=validate
+            agent=agent, validate=False
         )
 
     # Calculate duration

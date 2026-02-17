@@ -57,6 +57,9 @@ class BuildStats:
     total_api_turns: int = 0
     model: str = ""
     tool_calls: dict = field(default_factory=dict)
+    build_loops: int = 0
+    review_loops: int = 0
+    validate_loops: int = 0
 
     def add_usage(self, usage: dict) -> None:
         """Add token usage from a result event."""
@@ -189,6 +192,13 @@ class BuildStats:
         print(f"│  TIME       {time_str:<25}│")
         print(f"│  TASKS      {tasks_str:<25}│")
         print(f"│  COMMITS    {self.iterations_completed:<25}│")
+
+        # Show loop type counts if any were tracked
+        total_loops = self.build_loops + self.review_loops + self.validate_loops
+        if total_loops > 0:
+            loops_str = f"B:{self.build_loops}  R:{self.review_loops}  V:{self.validate_loops}"
+            print(f"│  LOOPS      {loops_str:<25}│")
+
         print(f"│  TOKENS     {self._format_tokens(total_tokens):<25}│")
         print(f"│  CACHE      {cache_str:<25}│")
         print(f"│  TOOLS      {total_tool_calls:<25}│")

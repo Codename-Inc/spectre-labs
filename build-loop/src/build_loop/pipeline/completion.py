@@ -52,6 +52,7 @@ class PromiseCompletion(CompletionStrategy):
         complete_signals: List of signals that indicate completion
                          (e.g., ["TASK_COMPLETE", "BUILD_COMPLETE"])
         require_success: If True, requires exit_code == 0 for completion
+        extract_artifacts: If True, also extract JSON blocks as artifacts
     """
 
     # Regex pattern for promise tags
@@ -61,15 +62,18 @@ class PromiseCompletion(CompletionStrategy):
         self,
         complete_signals: list[str] | None = None,
         require_success: bool = False,
+        extract_artifacts: bool = False,
     ):
         self.complete_signals = complete_signals or ["TASK_COMPLETE", "BUILD_COMPLETE"]
         self.require_success = require_success
+        self.extract_artifacts = extract_artifacts
 
     def evaluate(self, output: str, exit_code: int) -> CompletionResult:
         """Detect promise tags in output.
 
         Scans output for [[PROMISE:...]] patterns. If a matching signal
-        is found, returns completion with that signal.
+        is found, returns completion with that signal. When extract_artifacts
+        is enabled, also extracts the last JSON code block as artifacts.
         """
         # Extract all promise tags
         matches = self.PROMISE_PATTERN.findall(output)
@@ -85,9 +89,13 @@ class PromiseCompletion(CompletionStrategy):
                         signal=signal,
                         artifacts={"exit_code": exit_code}
                     )
+                artifacts = {}
+                if self.extract_artifacts:
+                    artifacts = self._extract_json_artifacts(output)
                 return CompletionResult(
                     is_complete=True,
                     signal=signal,
+                    artifacts=artifacts,
                 )
 
         # No completion signal found
@@ -95,6 +103,17 @@ class PromiseCompletion(CompletionStrategy):
             is_complete=False,
             signal=signals[-1] if signals else None,
         )
+
+    def _extract_json_artifacts(self, output: str) -> dict[str, Any]:
+        """Extract artifacts from the last JSON code block in output."""
+        matches = list(JsonCompletion.JSON_BLOCK_PATTERN.finditer(output))
+        if not matches:
+            return {}
+        try:
+            data = json.loads(matches[-1].group(1).strip())
+            return data if isinstance(data, dict) else {}
+        except json.JSONDecodeError:
+            return {}
 
 
 class JsonCompletion(CompletionStrategy):

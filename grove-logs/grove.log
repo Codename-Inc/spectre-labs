@@ -25,3 +25,6 @@
 [2026-01-27 17:08:14] [NOTIFY] Event= Type= TurnID= StopHook=false Path=/Users/joe/Dev/spectre-labs Message=
 [2026-01-27 17:08:14] [NOTIFY] Title set from branch: 🌳 [spectre-labs] → main
 [2026-01-27 17:08:14] [NOTIFY] Sending: Title='🌳 [spectre-labs] → main' Message='Ready for your review! 🚀' Subtitle='' Sound='Bottle'
+[2026-02-09 18:58:26] [NOTIFY] Event= Type= TurnID= StopHook=false Path=/Users/joe/Dev/spectre-labs Message=
+[2026-02-09 18:58:26] [NOTIFY] Title set from branch: 🌳 [spectre-labs] → main
+[2026-02-09 18:58:26] [NOTIFY] Sending: Title='🌳 [spectre-labs] → main' Message='Ready for your review! 🚀' Subtitle='' Sound='Bottle'

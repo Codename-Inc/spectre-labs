@@ -129,11 +129,15 @@ class PipelineExecutor:
         runner: AgentRunner,
         on_event: Callable[[PipelineEvent], None] | None = None,
         context: dict[str, Any] | None = None,
+        before_stage: Callable[[str, dict[str, Any]], None] | None = None,
+        after_stage: Callable[[str, dict[str, Any], CompletionResult], None] | None = None,
     ):
         self.config = config
         self.runner = runner
         self.on_event = on_event
         self.initial_context = context or {}
+        self.before_stage = before_stage
+        self.after_stage = after_stage
         self._state = PipelineState()
         self._stages: dict[str, Stage] = {}
         self._should_stop = False
@@ -204,6 +208,13 @@ class PipelineExecutor:
             self._state.current_stage = current_stage_name
             self._emit(StageStartedEvent(stage=current_stage_name))
 
+            # Call before_stage hook
+            if self.before_stage:
+                try:
+                    self.before_stage(current_stage_name, context)
+                except Exception as e:
+                    logger.warning("before_stage hook error for '%s': %s", current_stage_name, e)
+
             # Run the stage
             try:
                 result, iterations = stage.run(context, stats)
@@ -217,6 +228,13 @@ class PipelineExecutor:
                 break
 
             self._state.total_iterations += iterations
+
+            # Call after_stage hook
+            if self.after_stage:
+                try:
+                    self.after_stage(current_stage_name, context, result)
+                except Exception as e:
+                    logger.warning("after_stage hook error for '%s': %s", current_stage_name, e)
 
             # Merge artifacts into global state
             self._state.global_artifacts.update(result.artifacts)
@@ -282,6 +300,8 @@ def create_pipeline_executor(
     agent_name: str = "claude",
     on_event: Callable[[PipelineEvent], None] | None = None,
     context: dict[str, Any] | None = None,
+    before_stage: Callable[[str, dict[str, Any]], None] | None = None,
+    after_stage: Callable[[str, dict[str, Any], CompletionResult], None] | None = None,
 ) -> PipelineExecutor:
     """Factory function to create a PipelineExecutor.
 
@@ -290,6 +310,8 @@ def create_pipeline_executor(
         agent_name: Agent backend name ("claude" or "codex")
         on_event: Optional callback for pipeline events
         context: Initial context variables
+        before_stage: Optional callback before each stage runs
+        after_stage: Optional callback after each stage completes
 
     Returns:
         Configured PipelineExecutor instance
@@ -302,4 +324,6 @@ def create_pipeline_executor(
         runner=runner,
         on_event=on_event,
         context=context,
+        before_stage=before_stage,
+        after_stage=after_stage,
     )

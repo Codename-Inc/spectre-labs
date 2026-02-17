@@ -65,6 +65,7 @@ class Stage:
         self.on_iteration = on_iteration
         self.on_output = on_output
         self._template_cache: str | None = None
+        self._cumulative_iterations: int = 0
 
     @property
     def name(self) -> str:
@@ -179,14 +180,15 @@ class Stage:
 
         while iterations < self.config.max_iterations:
             iterations += 1
+            self._cumulative_iterations += 1
 
             # Notify iteration start
             if self.on_iteration:
-                self.on_iteration(iterations, self.config.max_iterations)
+                self.on_iteration(self._cumulative_iterations, self.config.max_iterations)
 
             # Print iteration header
             print(f"\n{'='*60}")
-            print(f"🔄 [{self.name}] Iteration {iterations}/{self.config.max_iterations}")
+            print(f"🔄 [{self.name}] Iteration {self._cumulative_iterations}/{self.config.max_iterations}")
             print(f"{'='*60}\n")
 
             try:

@@ -1,0 +1,4 @@
+# Sparks Knowledge Registry
+# Format: skill-name|category|triggers|description
+
+feature-pipeline-abstraction|feature|pipeline, stages, completion strategy, build loop, web gui, spectre-build serve|Use when working with pipeline stages, completion strategies, build loop orchestration, or the web GUI for spectre-build
