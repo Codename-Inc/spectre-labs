@@ -104,15 +104,15 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] Writes findings to `{output_dir}/task_context.md` with architecture patterns, dependencies, integration points
   - [x] Emits JSON with `"status": "RESEARCH_COMPLETE"` and `"task_context_path"` artifact
 
-#### [2.2] Create assess stage prompt
-- [ ] **2.2.1** Write `prompts/planning/assess.md` template
+#### [x] [2.2] Create assess stage prompt
+- [x] **2.2.1** Write `prompts/planning/assess.md` template
   - **Produces**: Complexity tier signal (`LIGHT`/`STANDARD`/`COMPREHENSIVE`) and updated `task_context.md`
   - **Consumed by**: Pipeline transitions route to `create_plan` or `create_tasks` based on signal
   - **Replaces**: Complexity assessment from interactive `/spectre:plan` Step 3
-  - [ ] Reads `{task_context_path}` and scope docs, scores complexity (files impacted, pattern match, components crossed, data model changes, integration points)
-  - [ ] Checks hard-stops (new service, auth/PII change, public API change, etc.)
-  - [ ] For COMPREHENSIVE: includes architecture design section in `task_context.md`
-  - [ ] Emits JSON with `"status"` as tier signal plus `"depth"` and `"tier"` artifact fields
+  - [x] Reads `{task_context_path}` and scope docs, scores complexity (files impacted, pattern match, components crossed, data model changes, integration points)
+  - [x] Checks hard-stops (new service, auth/PII change, public API change, etc.)
+  - [x] For COMPREHENSIVE: includes architecture design section in `task_context.md`
+  - [x] Emits JSON with `"status"` as tier signal plus `"depth"` and `"tier"` artifact fields
 
 #### [2.3] Create plan generation prompt
 - [ ] **2.3.1** Write `prompts/planning/create_plan.md` template
