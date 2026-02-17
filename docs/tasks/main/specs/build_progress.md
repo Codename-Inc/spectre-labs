@@ -38,3 +38,17 @@
 - Template specifies a markdown structure for `task_context.md` output so downstream stages get consistent input
 - Included "Do NOT" guardrails to prevent the agent from doing work that belongs to later stages
 **Blockers/Risks**: None
+
+## Iteration — [2.2] Create assess stage prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `assess.md` prompt with a comprehensive autonomous complexity assessment template. The prompt guides the agent through 6 steps: read task context and scope docs, score complexity across 5 dimensions (files impacted, pattern match, components crossed, data model changes, integration points) using a Low/Medium/High scoring matrix, check hard-stop conditions (new service, auth/PII, public API, new data pipeline, cross-team dependency), determine tier (LIGHT/STANDARD/COMPREHENSIVE) from total score, write architecture design section into task_context.md for COMPREHENSIVE tier, and emit JSON with status/depth/tier fields. Added 12 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/planning/assess.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_assess_prompt.py` (new, 12 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.2 complete)
+**Key Decisions**:
+- Used a scoring matrix (5 dimensions x 3 levels = 5-15 total) to make tier determination concrete and reproducible
+- Hard-stops override the score entirely — any single hard-stop forces COMPREHENSIVE
+- Architecture design for COMPREHENSIVE is appended to existing task_context.md (not a separate file) so create_plan stage gets it automatically
+- Follows same style as research.md — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
+**Blockers/Risks**: None
