@@ -66,3 +66,17 @@
 - Writing rules require grounding claims in code references from task_context.md
 - Follows same style as research.md and assess.md — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
 **Blockers/Risks**: None
+
+## Iteration — [2.4] Create task breakdown prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `create_tasks.md` prompt with a comprehensive autonomous task breakdown template. The prompt guides the agent through 7 steps: read plan (conditionally for LIGHT tier), task context, and scope docs; extract and number requirements (REQ-001 etc.); generate 4-level hierarchical task breakdown (Phase > Parent > Sub-task > Acceptance Criteria) with integration-aware Produces/Consumed by/Replaces fields; validate requirements coverage; generate sequential and parallel execution strategies; write to `{output_dir}/specs/tasks.md` with full structure including requirements tracing table, architecture context, and coverage summary; and emit `TASKS_COMPLETE` JSON with `tasks_path` artifact. Added 15 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/planning/create_tasks.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_create_tasks_prompt.py` (new, 15 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.4 complete)
+**Key Decisions**:
+- Adapted the interactive `/spectre:create_tasks` command's integration-aware task principle (Produces/Consumed by/Replaces) for autonomous operation
+- Requirements tracing table is mandatory — every task must map to a numbered requirement
+- Template handles LIGHT tier gracefully (plan file may not exist)
+- Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
+**Blockers/Risks**: None
