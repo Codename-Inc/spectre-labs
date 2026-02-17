@@ -35,6 +35,10 @@ def save_session(
     validate: bool = False,
     manifest_path: str | None = None,
     pipeline_path: str | None = None,
+    plan: bool = False,
+    plan_output_dir: str | None = None,
+    plan_context: dict | None = None,
+    plan_clarifications_path: str | None = None,
 ) -> None:
     """
     Save current build session to disk for later resume.
@@ -52,6 +56,10 @@ def save_session(
         "validate": validate,
         "manifest_path": manifest_path,
         "pipeline_path": pipeline_path,
+        "plan": plan,
+        "plan_output_dir": plan_output_dir,
+        "plan_context": plan_context,
+        "plan_clarifications_path": plan_clarifications_path,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "cwd": str(Path.cwd()),
     }
@@ -194,6 +202,12 @@ Examples:
         "--validate",
         action="store_true",
         help="Run post-build validation after successful build",
+    )
+
+    parser.add_argument(
+        "--plan",
+        action="store_true",
+        help="Run planning pipeline: scope docs → build-ready manifest",
     )
 
     parser.add_argument(
@@ -626,6 +640,152 @@ def run_default_pipeline(
         return 1, state.total_iterations
 
 
+def run_plan_pipeline(
+    context_files: list[str],
+    max_iterations: int,
+    agent: str = "claude",
+    output_dir: str | None = None,
+    resume_stage: str | None = None,
+    resume_context: dict | None = None,
+) -> tuple[int, int]:
+    """Run the planning pipeline: scope docs → build-ready manifest.
+
+    Creates a multi-stage pipeline (research → assess → [create_plan] →
+    create_tasks → plan_review → req_validate) or a single-stage resume
+    pipeline (update_docs) for post-clarification runs.
+
+    Handles CLARIFICATIONS_NEEDED by saving session for later resume.
+
+    Args:
+        context_files: List of scope document paths
+        max_iterations: Maximum iterations per stage
+        agent: Agent backend to use
+        output_dir: Output directory for artifacts (default: docs/tasks/{branch})
+        resume_stage: If set, use resume pipeline starting at this stage
+        resume_context: Preserved context dict from a prior session
+
+    Returns:
+        Tuple of (exit_code, total_iterations_completed)
+    """
+    import subprocess as _subprocess
+
+    from .agent import get_agent
+    from .hooks import plan_after_stage, plan_before_stage
+    from .pipeline.executor import PipelineExecutor, PipelineStatus
+    from .pipeline.loader import create_plan_pipeline, create_plan_resume_pipeline
+    from .stats import BuildStats, create_plan_event_handler
+
+    # Get agent runner
+    runner = get_agent(agent)
+    if not runner.check_available():
+        print(f"❌ ERROR: {runner.name} CLI not found", file=sys.stderr)
+        return 127, 0
+
+    # Determine output directory
+    if not output_dir:
+        try:
+            branch = _subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                text=True, stderr=_subprocess.DEVNULL,
+            ).strip()
+        except (FileNotFoundError, _subprocess.CalledProcessError):
+            branch = "main"
+        output_dir = str(Path.cwd() / "docs" / "tasks" / branch)
+
+    # Ensure output directories exist
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    (Path(output_dir) / "specs").mkdir(parents=True, exist_ok=True)
+    (Path(output_dir) / "clarifications").mkdir(parents=True, exist_ok=True)
+
+    # Create pipeline config
+    if resume_stage:
+        config = create_plan_resume_pipeline()
+    else:
+        config = create_plan_pipeline()
+
+    # Build context for prompt substitution
+    if context_files:
+        context_str = "\n".join(f"- `{f}`" for f in context_files)
+    else:
+        context_str = "None"
+
+    context = resume_context or {
+        "context_files": context_str,
+        "output_dir": output_dir,
+        "task_context_path": str(Path(output_dir) / "task_context.md"),
+        "plan_path": str(Path(output_dir) / "specs" / "plan.md"),
+        "tasks_path": str(Path(output_dir) / "specs" / "tasks.md"),
+        "clarifications_path": "",
+        "clarification_answers": "",
+        "manifest_path": "",
+        "depth": "standard",
+        "tier": "STANDARD",
+    }
+
+    # Stats with event-based loop counting
+    stats = BuildStats()
+    on_event = create_plan_event_handler(stats)
+
+    # Create and run executor with planning hooks
+    executor = PipelineExecutor(
+        config=config,
+        runner=runner,
+        on_event=on_event,
+        context=context,
+        before_stage=plan_before_stage,
+        after_stage=plan_after_stage,
+    )
+
+    state = executor.run(stats)
+
+    # Check if pipeline ended with CLARIFICATIONS_NEEDED
+    last_signal = None
+    if state.stage_history:
+        last_signal = state.stage_history[-1][1]
+
+    if last_signal == "CLARIFICATIONS_NEEDED":
+        clarif_path = state.global_artifacts.get(
+            "clarifications_path",
+            context.get("clarifications_path", ""),
+        )
+
+        print(f"\n{'='*60}")
+        print("📋 CLARIFICATIONS NEEDED")
+        print(f"   Edit: {clarif_path}")
+        print(f"   Then: spectre-build resume")
+        print(f"{'='*60}\n")
+
+        # Save session for resume
+        save_session(
+            tasks_file="",
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+            plan=True,
+            plan_output_dir=output_dir,
+            plan_context=context,
+            plan_clarifications_path=clarif_path,
+        )
+
+        return 0, state.total_iterations
+
+    # Pipeline completed normally
+    manifest_path = state.global_artifacts.get("manifest_path", "")
+    if manifest_path:
+        print(f"\n{'='*60}")
+        print("✅ PLANNING COMPLETE")
+        print(f"   Manifest: {manifest_path}")
+        print(f"   Run: spectre-build {manifest_path}")
+        print(f"{'='*60}\n")
+
+    if state.status == PipelineStatus.COMPLETED:
+        return 0, state.total_iterations
+    elif state.status == PipelineStatus.STOPPED:
+        return 130, state.total_iterations
+    else:
+        return 1, state.total_iterations
+
+
 def run_resume(args: argparse.Namespace) -> None:
     """Handle the 'resume' subcommand."""
     import time
@@ -824,6 +984,40 @@ def main() -> None:
 
     # Determine notification setting (--no-notify overrides --notify)
     send_notification = args.notify and not args.no_notify
+
+    # Handle --plan mode
+    if args.plan:
+        if not args.context:
+            print("Error: --plan requires --context with scope documents", file=sys.stderr)
+            sys.exit(1)
+
+        context_files = [normalize_path(f) for f in args.context]
+        context_files = [str(Path(f).resolve()) for f in context_files]
+        max_iterations = args.max_iterations
+        agent = args.agent
+        project_name = Path.cwd().name
+        start_time = time.time()
+
+        save_session("", context_files, max_iterations, agent=agent, plan=True)
+
+        exit_code, iterations_completed = run_plan_pipeline(
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+        )
+
+        duration = time.time() - start_time
+        duration_str = format_duration(duration)
+
+        if send_notification:
+            notify_build_complete(
+                tasks_completed=iterations_completed,
+                total_time=duration_str,
+                success=(exit_code == 0),
+                project=project_name,
+            )
+
+        sys.exit(exit_code)
 
     # Get tasks file - from args or interactive prompt
     tasks_file = args.tasks

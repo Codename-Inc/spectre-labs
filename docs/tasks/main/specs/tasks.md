@@ -188,32 +188,32 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
 
 ### Phase 4: CLI Integration
 
-#### [4.1] Add `--plan` flag and `run_plan_pipeline()` to CLI
-- [ ] **4.1.1** Add `--plan` argument to `parse_args()` in `cli.py`
+#### [x] [4.1] Add `--plan` flag and `run_plan_pipeline()` to CLI
+- [x] **4.1.1** Add `--plan` argument to `parse_args()` in `cli.py`
   - **Produces**: `args.plan` boolean flag
   - **Consumed by**: `main()` routing logic
   - **Replaces**: N/A (new flag)
-  - [ ] Added as `store_true` action, help text describes planning pipeline
-  - [ ] `--plan` makes `--tasks` optional (tasks are generated)
+  - [x] Added as `store_true` action, help text describes planning pipeline
+  - [x] `--plan` makes `--tasks` optional (tasks are generated)
 
-- [ ] **4.1.2** Implement `run_plan_pipeline()` function in `cli.py`
+- [x] **4.1.2** Implement `run_plan_pipeline()` function in `cli.py`
   - **Produces**: `tuple[int, int]` (exit_code, total_iterations)
   - **Consumed by**: `main()` and `run_resume()` routing
   - **Replaces**: N/A (new function alongside `run_default_pipeline`)
-  - [ ] Creates output directory (`docs/tasks/{branch_name}` or user-specified)
-  - [ ] Builds initial context dict with `context_files`, `output_dir`, paths
-  - [ ] Calls `create_plan_pipeline()` or `create_plan_resume_pipeline()` based on `resume_stage` param
-  - [ ] Wires `plan_before_stage`/`plan_after_stage` hooks and `on_event` callback
-  - [ ] Handles `CLARIFICATIONS_NEEDED` signal: saves session, prints message, returns exit code 0
-  - [ ] On `PLAN_VALIDATED` / `PLAN_READY`: prints manifest path and `spectre-build` command
+  - [x] Creates output directory (`docs/tasks/{branch_name}` or user-specified)
+  - [x] Builds initial context dict with `context_files`, `output_dir`, paths
+  - [x] Calls `create_plan_pipeline()` or `create_plan_resume_pipeline()` based on `resume_stage` param
+  - [x] Wires `plan_before_stage`/`plan_after_stage` hooks and `on_event` callback
+  - [x] Handles `CLARIFICATIONS_NEEDED` signal: saves session, prints message, returns exit code 0
+  - [x] On `PLAN_VALIDATED` / `PLAN_READY`: prints manifest path and `spectre-build` command
 
-- [ ] **4.1.3** Wire `--plan` routing in `main()` function
+- [x] **4.1.3** Wire `--plan` routing in `main()` function
   - **Produces**: Correct routing from `main()` to `run_plan_pipeline()`
   - **Consumed by**: Entry point execution flow
   - **Replaces**: N/A (extends existing routing)
-  - [ ] `--plan` takes priority: `if args.plan → run_plan_pipeline()`
-  - [ ] `--plan` without `--context` prints error and exits
-  - [ ] Sends notification on completion/error
+  - [x] `--plan` takes priority: `if args.plan → run_plan_pipeline()`
+  - [x] `--plan` without `--context` prints error and exits
+  - [x] Sends notification on completion/error
 
 #### [4.2] Extend session persistence for planning
 - [ ] **4.2.1** Update `save_session()` and `load_session()` for planning state
