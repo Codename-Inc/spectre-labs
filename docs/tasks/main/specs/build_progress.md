@@ -109,3 +109,17 @@
 - Clarifications file uses `<response></response>` blocks for structured user input
 - Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
 **Blockers/Risks**: None
+
+## Iteration — [2.7] Create update_docs prompt (resume stage)
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `update_docs.md` prompt with a comprehensive autonomous resume stage template. The prompt guides the agent through 5 steps: read clarification answers (parsing gap types and user responses), read existing plan and tasks documents, update documents based on each answer type (new requirement, clarification, intentional exclusion, ambiguity resolution), write build.md manifest with YAML frontmatter (including `validate: true` and a "Clarifications Applied" section), and emit `PLAN_READY` JSON with `manifest_path` artifact. Added 13 unit tests covering template content, variable substitution, guardrails, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/planning/update_docs.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_update_docs_prompt.py` (new, 13 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.7 complete)
+**Key Decisions**:
+- Template uses `{clarification_answers}` variable (injected by `plan_before_stage` hook reading the clarifications file)
+- Four concrete action types for processing answers: add new requirement, clarify existing, confirm out-of-scope, resolve ambiguity
+- Explicit guardrails prevent re-researching codebase, writing code, removing existing requirements, or creating new clarification questions
+- Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
+**Blockers/Risks**: None
