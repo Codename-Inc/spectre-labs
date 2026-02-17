@@ -123,14 +123,14 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] Writes plan to `{output_dir}/specs/plan.md` with Overview, Technical Approach, Critical Files
   - [x] Emits JSON with `"status": "PLAN_COMPLETE"` and `"plan_path"` artifact
 
-#### [2.4] Create task breakdown prompt
-- [ ] **2.4.1** Write `prompts/planning/create_tasks.md` template
+#### [x] [2.4] Create task breakdown prompt
+- [x] **2.4.1** Write `prompts/planning/create_tasks.md` template
   - **Produces**: `tasks.md` file in `{output_dir}/specs/`
   - **Consumed by**: Plan review stage and req_validate stage read `tasks.md`
   - **Replaces**: Task breakdown from interactive `/spectre:create_tasks`
-  - [ ] Reads `{plan_path}` (if exists — may not for LIGHT), `{task_context_path}`, and scope docs
-  - [ ] Generates hierarchical task breakdown (Phase → Parent → Sub-task → Acceptance Criteria)
-  - [ ] Emits JSON with `"status": "TASKS_COMPLETE"` and `"tasks_path"` artifact
+  - [x] Reads `{plan_path}` (if exists — may not for LIGHT), `{task_context_path}`, and scope docs
+  - [x] Generates hierarchical task breakdown (Phase → Parent → Sub-task → Acceptance Criteria)
+  - [x] Emits JSON with `"status": "TASKS_COMPLETE"` and `"tasks_path"` artifact
 
 #### [2.5] Create plan review prompt
 - [ ] **2.5.1** Write `prompts/planning/plan_review.md` template
