@@ -149,3 +149,17 @@
 - Handler increments `plan_loops` on any `StageCompletedEvent` (not filtered by stage name) since all stages in the planning pipeline are planning stages
 - `PLAN LOOPS` line is separate from the build/review/validate `LOOPS` line since they serve different pipelines
 **Blockers/Risks**: None
+
+## Iteration — [4.1] Add --plan flag and run_plan_pipeline() to CLI
+**Status**: Complete
+**What Was Done**: Added `--plan` CLI flag to `parse_args()`, implemented `run_plan_pipeline()` function in `cli.py`, and wired `--plan` routing in `main()`. The function creates the planning pipeline (or resume pipeline), builds the initial context dict with output directory paths, wires `plan_before_stage`/`plan_after_stage` hooks and `create_plan_event_handler` for stats, and handles the CLARIFICATIONS_NEEDED signal by saving session for `spectre-build resume`. Extended `save_session()` with `plan`, `plan_output_dir`, `plan_context`, and `plan_clarifications_path` keyword args. Added 7 unit tests covering flag parsing, pipeline creation with hook wiring, CLARIFICATIONS_NEEDED session save, agent-not-found error, main() routing, and error on --plan without --context.
+**Files Changed**:
+- `build-loop/src/build_loop/cli.py` (added `--plan` flag, `run_plan_pipeline()`, extended `save_session()`, wired routing in `main()`)
+- `build-loop/tests/test_plan_cli.py` (new, 7 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 4.1 complete)
+**Key Decisions**:
+- `run_plan_pipeline()` auto-detects the git branch name for the output directory (`docs/tasks/{branch}/`) with fallback to "main"
+- CLARIFICATIONS_NEEDED returns exit code 0 (not an error) since it's an expected pause point
+- `save_session()` extended with optional planning fields (backward compatible — defaults are False/None)
+- `--plan` routing placed before `--tasks` logic in `main()` so it skips tasks_file requirement
+**Blockers/Risks**: None
