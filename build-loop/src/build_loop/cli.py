@@ -821,42 +821,66 @@ def run_resume(args: argparse.Namespace) -> None:
             sys.exit(0)
 
     # Extract session values
-    tasks_file = session["tasks_file"]
     context_files = session.get("context_files", [])
     max_iterations = session.get("max_iterations", 10)
     agent = session.get("agent", "claude")
-    validate = session.get("validate", False)
-    manifest_path = session.get("manifest_path")
-    pipeline_path = session.get("pipeline_path")
-
-    # Validate files still exist
-    validate_inputs(tasks_file, context_files, max_iterations)
 
     # Determine notification setting
     send_notification = args.notify and not args.no_notify
     project_name = Path.cwd().name
 
-    # Update session timestamp
-    save_session(tasks_file, context_files, max_iterations, agent=agent,
-                 validate=validate, manifest_path=manifest_path, pipeline_path=pipeline_path)
-
     # Track build duration
     start_time = time.time()
 
-    # Run build with pipeline or legacy mode
-    if pipeline_path:
-        exit_code, iterations_completed = run_pipeline(
-            pipeline_path, tasks_file, context_files, agent=agent
+    # Handle planning session resume
+    if session.get("plan"):
+        # Update session timestamp for planning
+        save_session(
+            tasks_file="",
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+            plan=True,
+            plan_output_dir=session.get("plan_output_dir"),
+            plan_context=session.get("plan_context"),
+            plan_clarifications_path=session.get("plan_clarifications_path"),
         )
-    elif validate:
-        exit_code, iterations_completed = run_default_pipeline(
-            tasks_file, context_files, max_iterations, agent=agent
+
+        exit_code, iterations_completed = run_plan_pipeline(
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+            output_dir=session.get("plan_output_dir"),
+            resume_stage="update_docs",
+            resume_context=session.get("plan_context"),
         )
     else:
-        exit_code, iterations_completed = run_build_validate_cycle(
-            tasks_file, context_files, max_iterations,
-            agent=agent, validate=False
-        )
+        tasks_file = session["tasks_file"]
+        validate = session.get("validate", False)
+        manifest_path = session.get("manifest_path")
+        pipeline_path = session.get("pipeline_path")
+
+        # Validate files still exist (only for non-planning sessions)
+        validate_inputs(tasks_file, context_files, max_iterations)
+
+        # Update session timestamp
+        save_session(tasks_file, context_files, max_iterations, agent=agent,
+                     validate=validate, manifest_path=manifest_path, pipeline_path=pipeline_path)
+
+        # Run build with pipeline or legacy mode
+        if pipeline_path:
+            exit_code, iterations_completed = run_pipeline(
+                pipeline_path, tasks_file, context_files, agent=agent
+            )
+        elif validate:
+            exit_code, iterations_completed = run_default_pipeline(
+                tasks_file, context_files, max_iterations, agent=agent
+            )
+        else:
+            exit_code, iterations_completed = run_build_validate_cycle(
+                tasks_file, context_files, max_iterations,
+                agent=agent, validate=False
+            )
 
     # Calculate duration
     duration = time.time() - start_time

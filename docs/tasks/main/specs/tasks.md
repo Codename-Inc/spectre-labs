@@ -230,14 +230,14 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] Shows "Mode: Planning" and stage info
   - [x] Shows clarifications path if paused for clarifications
 
-#### [4.3] Wire planning resume flow
-- [ ] **4.3.1** Update `run_resume()` to handle planning sessions
+#### [x] [4.3] Wire planning resume flow
+- [x] **4.3.1** Update `run_resume()` to handle planning sessions
   - **Produces**: Correct routing from resume to `run_plan_pipeline()` with resume params
   - **Consumed by**: `spectre-build resume` command
   - **Replaces**: N/A (extends existing resume routing)
-  - [ ] Detects `plan=True` in session, routes to `run_plan_pipeline()` with `resume_stage="update_docs"`
-  - [ ] Passes preserved `plan_context` from session as initial context
-  - [ ] Shows planning-specific confirmation message mentioning clarifications file
+  - [x] Detects `plan=True` in session, routes to `run_plan_pipeline()` with `resume_stage="update_docs"`
+  - [x] Passes preserved `plan_context` from session as initial context
+  - [x] Shows planning-specific confirmation message mentioning clarifications file
 
 ---
 
