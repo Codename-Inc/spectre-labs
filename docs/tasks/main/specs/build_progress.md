@@ -94,3 +94,18 @@
 - Explicit "What to preserve" section prevents the agent from removing requirements while simplifying
 - Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
 **Blockers/Risks**: None
+
+## Iteration — [2.6] Create requirements validation prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `req_validate.md` prompt with a comprehensive autonomous requirements validation template. The prompt guides the agent through 6 steps: read all scope docs, plan, and tasks; extract and number requirements from scope; build a coverage matrix cross-referencing requirements against tasks (Covered/GAP); determine outcome based on gaps; if all covered write build.md manifest with YAML frontmatter (including `validate: true`), if gaps found write clarification questions to `{output_dir}/clarifications/scope_clarifications.md` with `<response></response>` blocks; and emit `PLAN_VALIDATED` or `CLARIFICATIONS_NEEDED` JSON. Added 14 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/planning/req_validate.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_req_validate_prompt.py` (new, 14 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.6 complete)
+**Key Decisions**:
+- Three gap types (Missing task, Incomplete task, Ambiguous scope) so clarification questions are appropriately framed
+- Coverage matrix format matches the requirements tracing table pattern from create_tasks stage
+- Manifest includes `validate: true` in YAML frontmatter so the build loop runs with the full validation pipeline
+- Clarifications file uses `<response></response>` blocks for structured user input
+- Follows same style as prior prompts — numbered steps, explicit rules, "Do NOT" guardrails, JSON output at end
+**Blockers/Risks**: None
