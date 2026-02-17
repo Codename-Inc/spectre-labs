@@ -163,3 +163,16 @@
 - `save_session()` extended with optional planning fields (backward compatible — defaults are False/None)
 - `--plan` routing placed before `--tasks` logic in `main()` so it skips tasks_file requirement
 **Blockers/Risks**: None
+
+## Iteration — [4.2] Extend session persistence for planning
+**Status**: Complete
+**What Was Done**: Updated `format_session_summary()` in `cli.py` to show planning-specific information when `session["plan"]` is True: displays "Mode: Planning" instead of tasks file, shows output directory and clarifications path. Verified that `save_session()` and `load_session()` already round-trip all planning fields correctly (implemented in 4.1). Added 6 unit tests covering save/load round-trip for planning fields, old-format backward compatibility, and format display for both planning and non-planning sessions.
+**Files Changed**:
+- `build-loop/src/build_loop/cli.py` (updated `format_session_summary()` with planning mode display)
+- `build-loop/tests/test_session_planning.py` (new, 6 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 4.2 complete)
+**Key Decisions**:
+- Planning session shows "Mode: Planning" instead of the tasks file path (since tasks are generated, not provided)
+- Output dir and clarifications path shown as separate lines for clarity in resume confirmation
+- 4.2.1 (save_session/load_session) was already fully implemented in task 4.1 — tests confirm correct behavior
+**Blockers/Risks**: None
