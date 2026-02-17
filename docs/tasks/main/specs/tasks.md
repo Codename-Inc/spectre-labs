@@ -141,14 +141,14 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] Edits files in-place to apply simplifications (removes complexity, not requirements)
   - [x] Emits JSON with `"status": "REVIEW_COMPLETE"` and summary of changes made
 
-#### [2.6] Create requirements validation prompt
-- [ ] **2.6.1** Write `prompts/planning/req_validate.md` template
+#### [x] [2.6] Create requirements validation prompt
+- [x] **2.6.1** Write `prompts/planning/req_validate.md` template
   - **Produces**: Either `build.md` manifest (if validated) or `scope_clarifications.md` (if gaps)
   - **Consumed by**: CLI parses signal to determine exit or pause behavior
   - **Replaces**: N/A (new validation concept for planning)
-  - [ ] Cross-references scope docs against `{plan_path}` and `{tasks_path}` for coverage gaps
-  - [ ] If all requirements addressed: writes manifest to `{output_dir}/build.md` with YAML frontmatter, emits `"status": "PLAN_VALIDATED"` with `"manifest_path"` artifact
-  - [ ] If gaps found: writes clarification questions to `{output_dir}/clarifications/scope_clarifications_{timestamp}.md` with `<response></response>` blocks, emits `"status": "CLARIFICATIONS_NEEDED"` with `"clarifications_path"` artifact
+  - [x] Cross-references scope docs against `{plan_path}` and `{tasks_path}` for coverage gaps
+  - [x] If all requirements addressed: writes manifest to `{output_dir}/build.md` with YAML frontmatter, emits `"status": "PLAN_VALIDATED"` with `"manifest_path"` artifact
+  - [x] If gaps found: writes clarification questions to `{output_dir}/clarifications/scope_clarifications_{timestamp}.md` with `<response></response>` blocks, emits `"status": "CLARIFICATIONS_NEEDED"` with `"clarifications_path"` artifact
 
 #### [2.7] Create update_docs prompt (resume stage)
 - [ ] **2.7.1** Write `prompts/planning/update_docs.md` template
