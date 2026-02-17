@@ -95,14 +95,14 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
 
 ### Phase 2: Prompt Templates
 
-#### [2.1] Create research stage prompt
-- [ ] **2.1.1** Write `prompts/planning/research.md` template
+#### [x] [2.1] Create research stage prompt
+- [x] **2.1.1** Write `prompts/planning/research.md` template
   - **Produces**: `task_context.md` file in `{output_dir}` with codebase research findings
   - **Consumed by**: Assess stage reads `task_context.md`
   - **Replaces**: Research steps from interactive `/spectre:create_plan` Step 1
-  - [ ] Instructs agent to read scope docs from `{context_files}`, explore codebase with Read/Grep/Glob
-  - [ ] Writes findings to `{output_dir}/task_context.md` with architecture patterns, dependencies, integration points
-  - [ ] Emits JSON with `"status": "RESEARCH_COMPLETE"` and `"task_context_path"` artifact
+  - [x] Instructs agent to read scope docs from `{context_files}`, explore codebase with Read/Grep/Glob
+  - [x] Writes findings to `{output_dir}/task_context.md` with architecture patterns, dependencies, integration points
+  - [x] Emits JSON with `"status": "RESEARCH_COMPLETE"` and `"task_context_path"` artifact
 
 #### [2.2] Create assess stage prompt
 - [ ] **2.2.1** Write `prompts/planning/assess.md` template
