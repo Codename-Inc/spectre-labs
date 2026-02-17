@@ -150,15 +150,15 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] If all requirements addressed: writes manifest to `{output_dir}/build.md` with YAML frontmatter, emits `"status": "PLAN_VALIDATED"` with `"manifest_path"` artifact
   - [x] If gaps found: writes clarification questions to `{output_dir}/clarifications/scope_clarifications_{timestamp}.md` with `<response></response>` blocks, emits `"status": "CLARIFICATIONS_NEEDED"` with `"clarifications_path"` artifact
 
-#### [2.7] Create update_docs prompt (resume stage)
-- [ ] **2.7.1** Write `prompts/planning/update_docs.md` template
+#### [x] [2.7] Create update_docs prompt (resume stage)
+- [x] **2.7.1** Write `prompts/planning/update_docs.md` template
   - **Produces**: Updated scope/plan/tasks docs plus `build.md` manifest
   - **Consumed by**: CLI reads manifest path from artifacts to print final command
   - **Replaces**: N/A (new resume-specific stage)
-  - [ ] Reads `{clarification_answers}` (injected by hook from clarifications file)
-  - [ ] Updates scope docs, plan.md, and tasks.md based on clarification answers
-  - [ ] Writes manifest to `{output_dir}/build.md` with YAML frontmatter
-  - [ ] Emits JSON with `"status": "PLAN_READY"` and `"manifest_path"` artifact
+  - [x] Reads `{clarification_answers}` (injected by hook from clarifications file)
+  - [x] Updates scope docs, plan.md, and tasks.md based on clarification answers
+  - [x] Writes manifest to `{output_dir}/build.md` with YAML frontmatter
+  - [x] Emits JSON with `"status": "PLAN_READY"` and `"manifest_path"` artifact
 
 ### Phase 3: Hooks and Stats
 
