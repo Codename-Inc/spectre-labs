@@ -176,3 +176,16 @@
 - Output dir and clarifications path shown as separate lines for clarity in resume confirmation
 - 4.2.1 (save_session/load_session) was already fully implemented in task 4.1 — tests confirm correct behavior
 **Blockers/Risks**: None
+
+## Iteration — [4.3] Wire planning resume flow
+**Status**: Complete
+**What Was Done**: Updated `run_resume()` in `cli.py` to detect planning sessions (`plan=True`) and route to `run_plan_pipeline()` with `resume_stage="update_docs"`, passing the preserved `plan_context` as `resume_context` and `plan_output_dir` as `output_dir`. Planning sessions skip `validate_inputs()` (no tasks file to validate) and save the session with all planning fields before resuming. The existing `format_session_summary()` already shows planning-specific confirmation (Mode: Planning, output dir, clarifications path). Added 6 unit tests covering routing, context passthrough, missing context fallback, validate_inputs skip, and session save.
+**Files Changed**:
+- `build-loop/src/build_loop/cli.py` (updated `run_resume()` with planning session detection and routing)
+- `build-loop/tests/test_plan_resume.py` (new, 6 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 4.3 complete)
+**Key Decisions**:
+- Planning branch placed first in `run_resume()` to short-circuit before extracting `tasks_file` (which is empty for planning sessions)
+- `validate_inputs()` skipped entirely for planning sessions since there's no tasks file to validate
+- Session save includes all planning fields for consistency (even though the pipeline may overwrite on CLARIFICATIONS_NEEDED)
+**Blockers/Risks**: None
