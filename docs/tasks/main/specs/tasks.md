@@ -114,14 +114,14 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] For COMPREHENSIVE: includes architecture design section in `task_context.md`
   - [x] Emits JSON with `"status"` as tier signal plus `"depth"` and `"tier"` artifact fields
 
-#### [2.3] Create plan generation prompt
-- [ ] **2.3.1** Write `prompts/planning/create_plan.md` template
+#### [x] [2.3] Create plan generation prompt
+- [x] **2.3.1** Write `prompts/planning/create_plan.md` template
   - **Produces**: `plan.md` file in `{output_dir}/specs/`
   - **Consumed by**: Create tasks stage and plan review stage read `plan.md`
   - **Replaces**: Plan generation from interactive `/spectre:create_plan` Step 3
-  - [ ] Reads `{task_context_path}` and scope docs, uses `{depth}` to determine section depth (standard vs comprehensive)
-  - [ ] Writes plan to `{output_dir}/specs/plan.md` with Overview, Technical Approach, Critical Files
-  - [ ] Emits JSON with `"status": "PLAN_COMPLETE"` and `"plan_path"` artifact
+  - [x] Reads `{task_context_path}` and scope docs, uses `{depth}` to determine section depth (standard vs comprehensive)
+  - [x] Writes plan to `{output_dir}/specs/plan.md` with Overview, Technical Approach, Critical Files
+  - [x] Emits JSON with `"status": "PLAN_COMPLETE"` and `"plan_path"` artifact
 
 #### [2.4] Create task breakdown prompt
 - [ ] **2.4.1** Write `prompts/planning/create_tasks.md` template
