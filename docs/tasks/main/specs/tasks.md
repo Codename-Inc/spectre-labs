@@ -177,14 +177,14 @@ Add a `--plan` flag to `spectre-build` that runs a multi-stage autonomous planni
   - [x] For `assess` stage: ensures `depth` and `tier` from artifacts flow into context
   - [x] For `req_validate` stage with `CLARIFICATIONS_NEEDED`: stores clarifications path in context for session save
 
-#### [3.2] Add planning loop counters to stats
-- [ ] **3.2.1** Add `plan_loops` field to `BuildStats` and wire `on_event` callback
+#### [x] [3.2] Add planning loop counters to stats
+- [x] **3.2.1** Add `plan_loops` field to `BuildStats` and wire `on_event` callback
   - **Produces**: `plan_loops` counter incremented per planning stage completion
   - **Consumed by**: `stats.print_summary()` dashboard display
   - **Replaces**: N/A (extends existing stats)
-  - [ ] Add `plan_loops: int = 0` to `BuildStats` dataclass
-  - [ ] Wire `on_event` callback in `run_plan_pipeline()` that increments `plan_loops` on `StageCompletedEvent`
-  - [ ] Dashboard shows `PLAN LOOPS: N` line in summary
+  - [x] Add `plan_loops: int = 0` to `BuildStats` dataclass
+  - [x] Wire `on_event` callback in `run_plan_pipeline()` that increments `plan_loops` on `StageCompletedEvent`
+  - [x] Dashboard shows `PLAN LOOPS: N` line in summary
 
 ### Phase 4: CLI Integration
 

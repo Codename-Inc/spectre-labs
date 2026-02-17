@@ -6,6 +6,7 @@ Tracks token usage, tool calls, and timing across build iterations.
 
 import time
 from dataclasses import dataclass, field
+from typing import Any, Callable
 
 
 
@@ -60,6 +61,7 @@ class BuildStats:
     build_loops: int = 0
     review_loops: int = 0
     validate_loops: int = 0
+    plan_loops: int = 0
 
     def add_usage(self, usage: dict) -> None:
         """Add token usage from a result event."""
@@ -199,6 +201,10 @@ class BuildStats:
             loops_str = f"B:{self.build_loops}  R:{self.review_loops}  V:{self.validate_loops}"
             print(f"│  LOOPS      {loops_str:<25}│")
 
+        # Show planning loop count if any were tracked
+        if self.plan_loops > 0:
+            print(f"│  PLAN LOOPS {self.plan_loops:<25}│")
+
         print(f"│  TOKENS     {self._format_tokens(total_tokens):<25}│")
         print(f"│  CACHE      {cache_str:<25}│")
         print(f"│  TOOLS      {total_tool_calls:<25}│")
@@ -209,3 +215,23 @@ class BuildStats:
         print(f"│  RANK: {rank:<5}              exit 0   │")
         print("╰──────────────────────────────────────╯")
         print()
+
+
+def create_plan_event_handler(stats: "BuildStats") -> Callable[[Any], None]:
+    """Create an on_event callback that increments plan_loops on stage completions.
+
+    Used by run_plan_pipeline() to track planning stage iterations.
+
+    Args:
+        stats: BuildStats instance to update
+
+    Returns:
+        Callback function suitable for PipelineExecutor's on_event parameter
+    """
+    from .pipeline.executor import StageCompletedEvent
+
+    def handler(event: Any) -> None:
+        if isinstance(event, StageCompletedEvent):
+            stats.plan_loops += 1
+
+    return handler
