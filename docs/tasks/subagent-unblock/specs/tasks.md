@@ -88,15 +88,15 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
 ### Phase 2: Expand Clean Stage → 3 Sub-Stages
 
 #### [2.1] Create `clean_discover.md` Prompt Template
-- [ ] **2.1.1** Create `build-loop/src/build_loop/prompts/shipping/clean_discover.md` containing Tasks 1-3 from current `clean.md`
+- [x] **2.1.1** Create `build-loop/src/build_loop/prompts/shipping/clean_discover.md` containing Tasks 1-3 from current `clean.md`
   - **Produces**: Prompt template for clean discovery sub-stage (scope + dead code + duplication analysis)
   - **Consumed by**: `create_ship_pipeline()` stage config, `Stage.build_prompt()` for template loading
   - **Replaces**: Tasks 1-3 section of monolithic `clean.md`
-  - [ ] Contains Task 1 (Determine Working Set Scope), Task 2 (Analyze Dead Code), Task 3 (Analyze Duplication)
-  - [ ] Uses `{parent_branch}`, `{working_set_scope}`, `{context_files}` template variables
-  - [ ] Completion signals: `CLEAN_DISCOVER_TASK_COMPLETE` (loop) and `CLEAN_DISCOVER_COMPLETE` (transition to clean_investigate)
-  - [ ] One-task-per-iteration instruction preserved
-  - [ ] Rules section scoped to analysis-only (no modifications)
+  - [x] Contains Task 1 (Determine Working Set Scope), Task 2 (Analyze Dead Code), Task 3 (Analyze Duplication)
+  - [x] Uses `{parent_branch}`, `{working_set_scope}`, `{context_files}` template variables
+  - [x] Completion signals: `CLEAN_DISCOVER_TASK_COMPLETE` (loop) and `CLEAN_DISCOVER_COMPLETE` (transition to clean_investigate)
+  - [x] One-task-per-iteration instruction preserved
+  - [x] Rules section scoped to analysis-only (no modifications)
 
 #### [2.2] Create `clean_investigate.md` Prompt Template with Subagent Dispatch
 - [ ] **2.2.1** Create `build-loop/src/build_loop/prompts/shipping/clean_investigate.md` containing Tasks 4-5 from current `clean.md`, enhanced with parallel subagent dispatch instructions modeled after original `/spectre:clean` Step 4 (`/Users/joe/Dev/spectre/plugins/spectre/commands/clean.md` lines 159-228)
