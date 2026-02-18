@@ -99,15 +99,15 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Rules section scoped to analysis-only (no modifications)
 
 #### [2.2] Create `clean_investigate.md` Prompt Template with Subagent Dispatch
-- [ ] **2.2.1** Create `build-loop/src/build_loop/prompts/shipping/clean_investigate.md` containing Tasks 4-5 from current `clean.md`, enhanced with parallel subagent dispatch instructions modeled after original `/spectre:clean` Step 4 (`/Users/joe/Dev/spectre/plugins/spectre/commands/clean.md` lines 159-228)
+- [x] **2.2.1** Create `build-loop/src/build_loop/prompts/shipping/clean_investigate.md` containing Tasks 4-5 from current `clean.md`, enhanced with parallel subagent dispatch instructions modeled after original `/spectre:clean` Step 4 (`/Users/joe/Dev/spectre/plugins/spectre/commands/clean.md` lines 159-228)
   - **Produces**: Prompt template for investigation sub-stage with parallel Task tool subagent dispatch
   - **Consumed by**: `create_ship_pipeline()` stage config, `Stage.build_prompt()`
   - **Replaces**: Tasks 4-5 section of monolithic `clean.md`
-  - [ ] Task 4 includes explicit subagent dispatch instructions: chunk SUSPECT findings into 2-5 groups, dispatch up to 4 parallel investigation subagents via Task tool in a single message
-  - [ ] Each subagent receives: area name, file list, detected patterns, investigation template with CONFIRMED_SAFE/NEEDS_VALIDATION/KEEP classification
-  - [ ] Task 5 includes optional second-wave validation subagents for high-risk SAFE_TO_REMOVE items (function/class/file deletions, export removals)
-  - [ ] Completion signals: `CLEAN_INVESTIGATE_TASK_COMPLETE` (loop) and `CLEAN_INVESTIGATE_COMPLETE` (transition to clean_execute)
-  - [ ] Uses `{parent_branch}`, `{working_set_scope}`, `{context_files}` template variables
+  - [x] Task 4 includes explicit subagent dispatch instructions: chunk SUSPECT findings into 2-5 groups, dispatch up to 4 parallel investigation subagents via Task tool in a single message
+  - [x] Each subagent receives: area name, file list, detected patterns, investigation template with CONFIRMED_SAFE/NEEDS_VALIDATION/KEEP classification
+  - [x] Task 5 includes optional second-wave validation subagents for high-risk SAFE_TO_REMOVE items (function/class/file deletions, export removals)
+  - [x] Completion signals: `CLEAN_INVESTIGATE_TASK_COMPLETE` (loop) and `CLEAN_INVESTIGATE_COMPLETE` (transition to clean_execute)
+  - [x] Uses `{parent_branch}`, `{working_set_scope}`, `{context_files}` template variables
 
 #### [2.3] Create `clean_execute.md` Prompt Template
 - [ ] **2.3.1** Create `build-loop/src/build_loop/prompts/shipping/clean_execute.md` containing Tasks 6-7 from current `clean.md`
