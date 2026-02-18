@@ -186,14 +186,14 @@ def plan_after_stage(
 def ship_before_stage(stage_name: str, context: dict[str, Any]) -> None:
     """Hook called before each ship pipeline stage runs.
 
-    For clean and test stages: snapshots HEAD so the after-hook can compute
-    what changed during the stage.
+    Snapshots HEAD at the start of each logical group (clean_discover,
+    test_plan) so the after-hook can compute what changed across the group.
 
     Args:
         stage_name: Name of the stage about to run
         context: Mutable pipeline context dictionary
     """
-    if stage_name in ("clean", "test"):
+    if stage_name in ("clean_discover", "test_plan"):
         head = snapshot_head()
         if head:
             context["_phase_start_commit"] = head
@@ -209,19 +209,20 @@ def ship_after_stage(
 ) -> None:
     """Hook called after each ship pipeline stage completes.
 
-    For clean stage: collects git diff and stores as clean_summary.
-    For test stage: collects git diff and stores as test_summary.
+    Captures summaries at the end of each logical group:
+    - clean_execute: collects git diff as clean_summary
+    - test_commit: collects git diff as test_summary
 
     Args:
         stage_name: Name of the stage that just completed
         context: Mutable pipeline context dictionary
         result: CompletionResult from the stage
     """
-    if stage_name == "clean":
+    if stage_name == "clean_execute":
         context["clean_summary"] = _collect_stage_summary(context)
         logger.info("Captured clean_summary for ship pipeline")
 
-    elif stage_name == "test":
+    elif stage_name == "test_commit":
         context["test_summary"] = _collect_stage_summary(context)
         logger.info("Captured test_summary for ship pipeline")
 

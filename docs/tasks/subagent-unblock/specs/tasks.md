@@ -184,20 +184,20 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Each stage references its corresponding new prompt template file
 
 #### [4.2] Update Ship Hooks for New Sub-Stage Names
-- [ ] **4.2.1** Update `ship_before_stage()` in `build-loop/src/build_loop/hooks.py` to snapshot HEAD at `clean_discover` and `test_plan` (start of each logical group), no-op for all other sub-stages
+- [x] **4.2.1** Update `ship_before_stage()` in `build-loop/src/build_loop/hooks.py` to snapshot HEAD at `clean_discover` and `test_plan` (start of each logical group), no-op for all other sub-stages
   - **Produces**: HEAD snapshots at correct points in sub-stage flow
   - **Consumed by**: `ship_after_stage()` for diff computation
   - **Replaces**: Previous `ship_before_stage()` that matched `"clean"` and `"test"`
-  - [ ] `clean_discover` triggers HEAD snapshot
-  - [ ] `test_plan` triggers HEAD snapshot
-  - [ ] `clean_investigate`, `clean_execute`, `test_execute`, `test_verify`, `test_commit`, `rebase` are no-ops
-- [ ] **4.2.2** Update `ship_after_stage()` in `build-loop/src/build_loop/hooks.py` to capture `clean_summary` after `clean_execute` and `test_summary` after `test_commit` (end of each logical group), no-op for all other sub-stages
+  - [x] `clean_discover` triggers HEAD snapshot
+  - [x] `test_plan` triggers HEAD snapshot
+  - [x] `clean_investigate`, `clean_execute`, `test_execute`, `test_verify`, `test_commit`, `rebase` are no-ops
+- [x] **4.2.2** Update `ship_after_stage()` in `build-loop/src/build_loop/hooks.py` to capture `clean_summary` after `clean_execute` and `test_summary` after `test_commit` (end of each logical group), no-op for all other sub-stages
   - **Produces**: `context["clean_summary"]` and `context["test_summary"]` populated at correct points
   - **Consumed by**: Rebase stage prompt via `{clean_summary}` and `{test_summary}` template variables
   - **Replaces**: Previous `ship_after_stage()` that matched `"clean"` and `"test"`
-  - [ ] `clean_execute` captures `clean_summary` from git diff
-  - [ ] `test_commit` captures `test_summary` from git diff
-  - [ ] All other sub-stages are no-ops
+  - [x] `clean_execute` captures `clean_summary` from git diff
+  - [x] `test_commit` captures `test_summary` from git diff
+  - [x] All other sub-stages are no-ops
 
 ---
 
