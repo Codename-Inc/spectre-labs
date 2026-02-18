@@ -62,6 +62,7 @@ class BuildStats:
     review_loops: int = 0
     validate_loops: int = 0
     plan_loops: int = 0
+    ship_loops: int = 0
 
     def add_usage(self, usage: dict) -> None:
         """Add token usage from a result event."""
@@ -205,6 +206,10 @@ class BuildStats:
         if self.plan_loops > 0:
             print(f"│  PLAN LOOPS {self.plan_loops:<25}│")
 
+        # Show ship loop count if any were tracked
+        if self.ship_loops > 0:
+            print(f"│  SHIP LOOPS {self.ship_loops:<25}│")
+
         print(f"│  TOKENS     {self._format_tokens(total_tokens):<25}│")
         print(f"│  CACHE      {cache_str:<25}│")
         print(f"│  TOOLS      {total_tool_calls:<25}│")
@@ -233,5 +238,25 @@ def create_plan_event_handler(stats: "BuildStats") -> Callable[[Any], None]:
     def handler(event: Any) -> None:
         if isinstance(event, StageCompletedEvent):
             stats.plan_loops += 1
+
+    return handler
+
+
+def create_ship_event_handler(stats: "BuildStats") -> Callable[[Any], None]:
+    """Create an on_event callback that increments ship_loops on stage completions.
+
+    Used by run_ship_pipeline() to track ship stage iterations.
+
+    Args:
+        stats: BuildStats instance to update
+
+    Returns:
+        Callback function suitable for PipelineExecutor's on_event parameter
+    """
+    from .pipeline.executor import StageCompletedEvent
+
+    def handler(event: Any) -> None:
+        if isinstance(event, StageCompletedEvent):
+            stats.ship_loops += 1
 
     return handler
