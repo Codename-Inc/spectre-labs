@@ -150,13 +150,13 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
   - [x] Includes clear STOP instructions between tasks and JSON completion block format
 
 #### [3.2] Create Test Stage Prompt
-- [ ] **3.2.1** Create `prompts/shipping/test.md` with a 4-task checklist: (1) discover working set + plan, (2) risk assessment + test plan (P0-P3 tiers), (3) write tests + verify, (4) commit. Uses `{working_set_scope}` and optional `{context_files}` variables. Each task emits `{"status": "TEST_TASK_COMPLETE"}`, final task emits `{"status": "TEST_COMPLETE"}`
+- [x] **3.2.1** Create `prompts/shipping/test.md` with a 4-task checklist: (1) discover working set + plan, (2) risk assessment + test plan (P0-P3 tiers), (3) write tests + verify, (4) commit. Uses `{working_set_scope}` and optional `{context_files}` variables. Each task emits `{"status": "TEST_TASK_COMPLETE"}`, final task emits `{"status": "TEST_COMPLETE"}`
   - **Produces**: Test stage prompt template file
   - **Consumed by**: `Stage.build_prompt()` during test stage execution (2.1.1)
   - **Replaces**: N/A (new file)
-  - [ ] Template contains 4 numbered tasks matching the scope's test checklist
-  - [ ] Uses `{working_set_scope}` and `{context_files}` placeholder variables
-  - [ ] Includes clear STOP instructions between tasks and JSON completion block format
+  - [x] Template contains 4 numbered tasks matching the scope's test checklist
+  - [x] Uses `{working_set_scope}` and `{context_files}` placeholder variables
+  - [x] Includes clear STOP instructions between tasks and JSON completion block format
 
 #### [3.3] Create Rebase Stage Prompt
 - [ ] **3.3.1** Create `prompts/shipping/rebase.md` as a single context window (not decomposed into tasks). Uses `{parent_branch}`, `{clean_summary}`, `{test_summary}` context variables. Covers: confirm target branch, prepare (commit uncommitted, fetch, create safety ref), execute rebase, resolve conflicts, verify (lint + tests pass), land via PR (`gh pr create` with template detection) or local merge (stash approval via `read -p` in Bash), summary. Emits `{"status": "SHIP_COMPLETE"}`
