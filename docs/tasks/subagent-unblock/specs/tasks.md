@@ -110,14 +110,14 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Uses `{parent_branch}`, `{working_set_scope}`, `{context_files}` template variables
 
 #### [2.3] Create `clean_execute.md` Prompt Template
-- [ ] **2.3.1** Create `build-loop/src/build_loop/prompts/shipping/clean_execute.md` containing Tasks 6-7 from current `clean.md`
+- [x] **2.3.1** Create `build-loop/src/build_loop/prompts/shipping/clean_execute.md` containing Tasks 6-7 from current `clean.md`
   - **Produces**: Prompt template for clean execution sub-stage (apply changes + lint)
   - **Consumed by**: `create_ship_pipeline()` stage config, `Stage.build_prompt()`
   - **Replaces**: Tasks 6-7 section of monolithic `clean.md`
-  - [ ] Contains Task 6 (Execute Approved Changes with test verification and revert on failure) and Task 7 (Lint Compliance)
-  - [ ] Completion signals: `CLEAN_EXECUTE_TASK_COMPLETE` (loop) and `CLEAN_EXECUTE_COMPLETE` (transition to test_plan)
-  - [ ] Uses `{parent_branch}`, `{working_set_scope}`, `{context_files}` template variables
-  - [ ] Commit instruction in both tasks (commit approved changes, commit lint fixes)
+  - [x] Contains Task 6 (Execute Approved Changes with test verification and revert on failure) and Task 7 (Lint Compliance)
+  - [x] Completion signals: `CLEAN_EXECUTE_TASK_COMPLETE` (loop) and `CLEAN_EXECUTE_COMPLETE` (transition to test_plan)
+  - [x] Uses `{parent_branch}`, `{working_set_scope}`, `{context_files}` template variables
+  - [x] Commit instruction in both tasks (commit approved changes, commit lint fixes)
 
 ---
 
