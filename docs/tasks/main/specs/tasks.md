@@ -170,26 +170,26 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
 ### Phase 4: Integration and Support Modules
 
 #### [4.1] Session Persistence and Resume
-- [ ] **4.1.1** Add `ship: bool = False` and `ship_context: dict | None = None` parameters to `save_session()` in `cli.py` with defaults for backward compatibility. Store both in the session JSON
+- [x] **4.1.1** Add `ship: bool = False` and `ship_context: dict | None = None` parameters to `save_session()` in `cli.py` with defaults for backward compatibility. Store both in the session JSON
   - **Produces**: Ship fields in session JSON
   - **Consumed by**: `run_resume()` for ship resume detection (4.1.2), `format_session_summary()` (4.1.3)
   - **Replaces**: N/A (extends existing function)
-  - [ ] New parameters have defaults — existing callers are unaffected
-  - [ ] `load_session()` retrieves ship fields via `.get()` with defaults (already safe pattern)
+  - [x] New parameters have defaults — existing callers are unaffected
+  - [x] `load_session()` retrieves ship fields via `.get()` with defaults (already safe pattern)
 
-- [ ] **4.1.2** Add `elif session.get("ship"):` block in `run_resume()` after the `if session.get("plan"):` block. Call `run_ship_pipeline()` with `resume_context=session.get("ship_context")`
+- [x] **4.1.2** Add `elif session.get("ship"):` block in `run_resume()` after the `if session.get("plan"):` block. Call `run_ship_pipeline()` with `resume_context=session.get("ship_context")`
   - **Produces**: Resume routing for interrupted ship sessions
   - **Consumed by**: Users invoking `spectre-build resume` after a ship interruption
   - **Replaces**: N/A (new elif branch)
-  - [ ] Ship sessions detected by `session.get("ship") == True`
-  - [ ] `run_ship_pipeline()` called with resume context from session, followed by notification
+  - [x] Ship sessions detected by `session.get("ship") == True`
+  - [x] `run_ship_pipeline()` called with resume context from session, followed by notification
 
-- [ ] **4.1.3** Update `format_session_summary()` to show "Mode: Ship" when `session.get("ship")` is true, and display `parent_branch` from `ship_context`
+- [x] **4.1.3** Update `format_session_summary()` to show "Mode: Ship" when `session.get("ship")` is true, and display `parent_branch` from `ship_context`
   - **Produces**: Human-readable ship session display
   - **Consumed by**: Resume confirmation prompt shown to user
   - **Replaces**: N/A (extends existing function)
-  - [ ] Summary shows "Mode: Ship" for ship sessions
-  - [ ] Parent branch is displayed from ship context
+  - [x] Summary shows "Mode: Ship" for ship sessions
+  - [x] Parent branch is displayed from ship context
 
 #### [4.2] Manifest Support
 - [ ] **4.2.1** Add `ship: bool = False` field to `BuildManifest` dataclass in `manifest.py`. Update `load_manifest()` to parse `ship` from YAML frontmatter

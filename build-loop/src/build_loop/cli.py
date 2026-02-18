@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .loop import run_build_loop
-from .notify import notify_build_complete, notify_build_error, notify_plan_complete
+from .notify import notify_build_complete, notify_build_error, notify_plan_complete, notify_ship_complete
 
 # Session file location
 SESSION_FILE = ".spectre/build-session.json"
@@ -39,6 +39,8 @@ def save_session(
     plan_output_dir: str | None = None,
     plan_context: dict | None = None,
     plan_clarifications_path: str | None = None,
+    ship: bool = False,
+    ship_context: dict | None = None,
 ) -> None:
     """
     Save current build session to disk for later resume.
@@ -60,6 +62,8 @@ def save_session(
         "plan_output_dir": plan_output_dir,
         "plan_context": plan_context,
         "plan_clarifications_path": plan_clarifications_path,
+        "ship": ship,
+        "ship_context": ship_context,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "cwd": str(Path.cwd()),
     }
@@ -90,7 +94,12 @@ def format_session_summary(session: dict) -> str:
         f"  Agent:      {session.get('agent', 'claude')}",
     ]
 
-    if session.get("plan"):
+    if session.get("ship"):
+        lines.append("  Mode:       Ship")
+        ship_ctx = session.get("ship_context") or {}
+        if ship_ctx.get("parent_branch"):
+            lines.append(f"  Parent:     {ship_ctx['parent_branch']}")
+    elif session.get("plan"):
         lines.append("  Mode:       Planning")
     else:
         lines.append(f"  Tasks:      {session['tasks_file']}")
@@ -899,6 +908,23 @@ def run_resume(args: argparse.Namespace) -> None:
             resume_stage="update_docs",
             resume_context=session.get("plan_context"),
         )
+    elif session.get("ship"):
+        # Update session timestamp for ship
+        save_session(
+            tasks_file="",
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+            ship=True,
+            ship_context=session.get("ship_context"),
+        )
+
+        exit_code, iterations_completed = run_ship_pipeline(
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+            resume_context=session.get("ship_context"),
+        )
     else:
         tasks_file = session["tasks_file"]
         validate = session.get("validate", False)
@@ -933,7 +959,14 @@ def run_resume(args: argparse.Namespace) -> None:
 
     # Send notification if enabled
     if send_notification:
-        if session.get("plan"):
+        if session.get("ship"):
+            notify_ship_complete(
+                stages_completed=iterations_completed,
+                total_time=duration_str,
+                success=(exit_code == 0),
+                project=project_name,
+            )
+        elif session.get("plan"):
             notify_plan_complete(
                 stages_completed=iterations_completed,
                 total_time=duration_str,
