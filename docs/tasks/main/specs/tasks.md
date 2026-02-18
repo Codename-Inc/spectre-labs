@@ -123,20 +123,20 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
   - [x] Denied tools reuse existing list (blocks AskUserQuestion, WebFetch, WebSearch, Task, EnterPlanMode, NotebookEdit)
 
 #### [2.2] Implement Ship Hooks
-- [ ] **2.2.1** Add `ship_before_stage()` function in `hooks.py` following the same signature as `plan_before_stage()`. For `"clean"` and `"test"`: snapshot HEAD via `snapshot_head()` from `git_scope.py`
+- [x] **2.2.1** Add `ship_before_stage()` function in `hooks.py` following the same signature as `plan_before_stage()`. For `"clean"` and `"test"`: snapshot HEAD via `snapshot_head()` from `git_scope.py`
   - **Produces**: `ship_before_stage()` callback function
   - **Consumed by**: `PipelineExecutor` via `before_stage` parameter (1.2.1)
   - **Replaces**: N/A
-  - [ ] Snapshots HEAD into context before clean and test stages
-  - [ ] No special before-hook logic for rebase stage
+  - [x] Snapshots HEAD into context before clean and test stages
+  - [x] No special before-hook logic for rebase stage
 
-- [ ] **2.2.2** Add `ship_after_stage()` function in `hooks.py` following the same signature as `plan_after_stage()`. For `"clean"`: collect git diff since snapshot, store as `context["clean_summary"]`. For `"test"`: collect git diff since snapshot, store as `context["test_summary"]`
+- [x] **2.2.2** Add `ship_after_stage()` function in `hooks.py` following the same signature as `plan_after_stage()`. For `"clean"`: collect git diff since snapshot, store as `context["clean_summary"]`. For `"test"`: collect git diff since snapshot, store as `context["test_summary"]`
   - **Produces**: `ship_after_stage()` callback function
   - **Consumed by**: `PipelineExecutor` via `after_stage` parameter (1.2.1)
   - **Replaces**: N/A
-  - [ ] After clean stage: `context["clean_summary"]` contains files removed and commits made
-  - [ ] After test stage: `context["test_summary"]` contains tests added and coverage changes
-  - [ ] No special after-hook logic for rebase stage
+  - [x] After clean stage: `context["clean_summary"]` contains files removed and commits made
+  - [x] After test stage: `context["test_summary"]` contains tests added and coverage changes
+  - [x] No special after-hook logic for rebase stage
 
 ### Phase 3: Prompt Templates
 

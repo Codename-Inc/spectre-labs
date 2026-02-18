@@ -1,9 +1,10 @@
 """
 Stage lifecycle hooks for pipeline execution.
 
-Provides before_stage and after_stage callbacks for both the build pipeline
-(git scope injection between build and code review stages) and the planning
-pipeline (depth defaults, clarification injection, artifact flow).
+Provides before_stage and after_stage callbacks for the build pipeline
+(git scope injection between build and code review stages), the planning
+pipeline (depth defaults, clarification injection, artifact flow), and the
+ship pipeline (HEAD snapshots, clean/test summary capture).
 """
 
 import logging
@@ -175,3 +176,76 @@ def plan_after_stage(
             if clarif_path:
                 context["clarifications_path"] = clarif_path
                 logger.info("Clarifications needed, path: %s", clarif_path)
+
+
+# ---------------------------------------------------------------------------
+# Ship Pipeline Hooks
+# ---------------------------------------------------------------------------
+
+
+def ship_before_stage(stage_name: str, context: dict[str, Any]) -> None:
+    """Hook called before each ship pipeline stage runs.
+
+    For clean and test stages: snapshots HEAD so the after-hook can compute
+    what changed during the stage.
+
+    Args:
+        stage_name: Name of the stage about to run
+        context: Mutable pipeline context dictionary
+    """
+    if stage_name in ("clean", "test"):
+        head = snapshot_head()
+        if head:
+            context["_phase_start_commit"] = head
+            logger.info("Snapshotted HEAD at %s for ship %s stage", head, stage_name)
+        else:
+            logger.warning("Could not snapshot HEAD before ship %s stage", stage_name)
+
+
+def ship_after_stage(
+    stage_name: str,
+    context: dict[str, Any],
+    result: CompletionResult,
+) -> None:
+    """Hook called after each ship pipeline stage completes.
+
+    For clean stage: collects git diff and stores as clean_summary.
+    For test stage: collects git diff and stores as test_summary.
+
+    Args:
+        stage_name: Name of the stage that just completed
+        context: Mutable pipeline context dictionary
+        result: CompletionResult from the stage
+    """
+    if stage_name == "clean":
+        context["clean_summary"] = _collect_stage_summary(context)
+        logger.info("Captured clean_summary for ship pipeline")
+
+    elif stage_name == "test":
+        context["test_summary"] = _collect_stage_summary(context)
+        logger.info("Captured test_summary for ship pipeline")
+
+
+def _collect_stage_summary(context: dict[str, Any]) -> str:
+    """Collect a git diff summary for a ship stage.
+
+    Returns a formatted string with changed files and commit messages,
+    or a fallback message if no start commit was captured.
+    """
+    start_commit = context.get("_phase_start_commit")
+    if not start_commit:
+        return "No changes captured (no start commit)"
+
+    diff = collect_diff(start_commit)
+    if not diff:
+        return "No changes captured (diff collection failed)"
+
+    parts = []
+    if diff.changed_files:
+        parts.append("Files changed:")
+        parts.extend(f"  - {f}" for f in diff.changed_files)
+    if diff.commit_messages:
+        parts.append("Commits:")
+        parts.extend(f"  - {msg}" for msg in diff.commit_messages)
+
+    return "\n".join(parts) if parts else "No changes detected"
