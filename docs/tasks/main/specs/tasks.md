@@ -141,13 +141,13 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
 ### Phase 3: Prompt Templates
 
 #### [3.1] Create Clean Stage Prompt
-- [ ] **3.1.1** Create `prompts/shipping/clean.md` with a 7-task checklist: (1) determine working set scope, (2) analyze dead code, (3) analyze duplication, (4) dispatch investigation subagents, (5) validate findings, (6) execute removals + verify + commit, (7) ESLint compliance. Uses `{parent_branch}` and `{working_set_scope}` context variables. Each task emits `{"status": "CLEAN_TASK_COMPLETE"}`, final task emits `{"status": "CLEAN_COMPLETE"}`
+- [x] **3.1.1** Create `prompts/shipping/clean.md` with a 7-task checklist: (1) determine working set scope, (2) analyze dead code, (3) analyze duplication, (4) dispatch investigation subagents, (5) validate findings, (6) execute removals + verify + commit, (7) ESLint compliance. Uses `{parent_branch}` and `{working_set_scope}` context variables. Each task emits `{"status": "CLEAN_TASK_COMPLETE"}`, final task emits `{"status": "CLEAN_COMPLETE"}`
   - **Produces**: Clean stage prompt template file
   - **Consumed by**: `Stage.build_prompt()` during clean stage execution (2.1.1)
   - **Replaces**: N/A (new file)
-  - [ ] Template contains 7 numbered tasks matching the scope's clean checklist
-  - [ ] Uses `{parent_branch}` and `{working_set_scope}` placeholder variables
-  - [ ] Includes clear STOP instructions between tasks and JSON completion block format
+  - [x] Template contains 7 numbered tasks matching the scope's clean checklist
+  - [x] Uses `{parent_branch}` and `{working_set_scope}` placeholder variables
+  - [x] Includes clear STOP instructions between tasks and JSON completion block format
 
 #### [3.2] Create Test Stage Prompt
 - [ ] **3.2.1** Create `prompts/shipping/test.md` with a 4-task checklist: (1) discover working set + plan, (2) risk assessment + test plan (P0-P3 tiers), (3) write tests + verify, (4) commit. Uses `{working_set_scope}` and optional `{context_files}` variables. Each task emits `{"status": "TEST_TASK_COMPLETE"}`, final task emits `{"status": "TEST_COMPLETE"}`
