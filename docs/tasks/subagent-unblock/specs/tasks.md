@@ -148,14 +148,14 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Uses `{working_set_scope}`, `{context_files}` template variables
 
 #### [3.3] Create `test_verify.md` Prompt Template
-- [ ] **3.3.1** Create `build-loop/src/build_loop/prompts/shipping/test_verify.md` for post-execution verification
+- [x] **3.3.1** Create `build-loop/src/build_loop/prompts/shipping/test_verify.md` for post-execution verification
   - **Produces**: Prompt template for test verification sub-stage (run suite, fix failures, re-verify)
   - **Consumed by**: `create_ship_pipeline()` stage config, `Stage.build_prompt()`
   - **Replaces**: N/A (new sub-stage, partially extracted from Task 3's verification section)
-  - [ ] Instructs: run full test suite scoped to working set, diagnose failures, fix (test bug vs production bug), re-run to confirm
-  - [ ] Completion signal: `TEST_VERIFY_COMPLETE` (transition to test_commit)
-  - [ ] Uses `{working_set_scope}`, `{context_files}` template variables
-  - [ ] Max iterations hint: keep low (3), verification should be quick
+  - [x] Instructs: run full test suite scoped to working set, diagnose failures, fix (test bug vs production bug), re-run to confirm
+  - [x] Completion signal: `TEST_VERIFY_COMPLETE` (transition to test_commit)
+  - [x] Uses `{working_set_scope}`, `{context_files}` template variables
+  - [x] Max iterations hint: keep low (3), verification should be quick
 
 #### [3.4] Create `test_commit.md` Prompt Template
 - [ ] **3.4.1** Create `build-loop/src/build_loop/prompts/shipping/test_commit.md` containing Task 4 from current `test.md`
