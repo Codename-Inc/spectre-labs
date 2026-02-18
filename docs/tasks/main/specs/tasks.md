@@ -192,19 +192,19 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
   - [x] Parent branch is displayed from ship context
 
 #### [4.2] Manifest Support
-- [ ] **4.2.1** Add `ship: bool = False` field to `BuildManifest` dataclass in `manifest.py`. Update `load_manifest()` to parse `ship` from YAML frontmatter
+- [x] **4.2.1** Add `ship: bool = False` field to `BuildManifest` dataclass in `manifest.py`. Update `load_manifest()` to parse `ship` from YAML frontmatter
   - **Produces**: `manifest.ship` boolean field
   - **Consumed by**: `run_manifest()` routing check (4.2.2)
   - **Replaces**: N/A (extends existing dataclass)
-  - [ ] `BuildManifest` has `ship` field with `False` default
-  - [ ] `load_manifest()` reads `ship` from frontmatter (same pattern as `validate`)
+  - [x] `BuildManifest` has `ship` field with `False` default
+  - [x] `load_manifest()` reads `ship` from frontmatter (same pattern as `validate`)
 
-- [ ] **4.2.2** Add `manifest.ship` routing check in `run_manifest()` in `cli.py`, before the `validate` check. Route to `run_ship_pipeline()` when `manifest.ship` is true
+- [x] **4.2.2** Add `manifest.ship` routing check in `run_manifest()` in `cli.py`, before the `validate` check. Route to `run_ship_pipeline()` when `manifest.ship` is true
   - **Produces**: Manifest-driven ship pipeline execution path
   - **Consumed by**: Users invoking `spectre-build ship.md`
   - **Replaces**: N/A (new routing branch)
-  - [ ] Ship check occurs before validate check in `run_manifest()`
-  - [ ] Routes to `run_ship_pipeline()` with manifest's context files and settings
+  - [x] Ship check occurs before validate check in `run_manifest()`
+  - [x] Routes to `run_ship_pipeline()` with manifest's context files and settings
 
 #### [4.3] Stats Tracking
 - [x] **4.3.1** Add `ship_loops: int = 0` field to `BuildStats` dataclass in `stats.py`

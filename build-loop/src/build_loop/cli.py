@@ -850,6 +850,28 @@ def run_plan_pipeline(
         return 1, state.total_iterations, ""
 
 
+def run_ship_pipeline(
+    context_files: list[str],
+    max_iterations: int,
+    agent: str = "claude",
+    resume_context: dict | None = None,
+) -> tuple[int, int]:
+    """Run the ship pipeline: clean → test → rebase.
+
+    Stub — full implementation in task 1.2.
+
+    Args:
+        context_files: Optional context document paths
+        max_iterations: Maximum iterations per stage
+        agent: Agent backend to use
+        resume_context: Preserved context dict from a prior session
+
+    Returns:
+        Tuple of (exit_code, total_iterations_completed)
+    """
+    raise NotImplementedError("run_ship_pipeline not yet implemented (task 1.2)")
+
+
 def run_resume(args: argparse.Namespace) -> None:
     """Handle the 'resume' subcommand."""
     import time
@@ -1011,19 +1033,44 @@ def run_manifest(manifest_path: str, args: argparse.Namespace) -> None:
     if args.max_iterations != 10:  # non-default means user specified
         max_iterations = args.max_iterations
 
-    # Validate inputs
-    validate_inputs(tasks_file, context_files, max_iterations)
-
     # Determine notification setting
     send_notification = args.notify and not args.no_notify
     project_name = Path.cwd().name
 
+    # Track build duration
+    start_time = time.time()
+
+    # Route based on manifest mode
+    if manifest.ship:
+        # Ship pipeline — no tasks file validation needed
+        save_session(tasks_file, context_files, max_iterations, agent=agent,
+                     ship=True, manifest_path=manifest_path)
+
+        exit_code, iterations_completed = run_ship_pipeline(
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+        )
+
+        duration = time.time() - start_time
+        duration_str = format_duration(duration)
+
+        if send_notification:
+            notify_ship_complete(
+                stages_completed=iterations_completed,
+                total_time=duration_str,
+                success=(exit_code == 0),
+                project=project_name,
+            )
+
+        sys.exit(exit_code)
+
+    # Validate inputs (only for build modes, not ship)
+    validate_inputs(tasks_file, context_files, max_iterations)
+
     # Save session for resume
     save_session(tasks_file, context_files, max_iterations, agent=agent,
                  validate=validate, manifest_path=manifest_path)
-
-    # Track build duration
-    start_time = time.time()
 
     # Run build with appropriate mode
     if validate:

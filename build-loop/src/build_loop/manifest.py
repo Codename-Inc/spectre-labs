@@ -18,6 +18,7 @@ class BuildManifest:
     max_iterations: int = 10
     agent: str = "claude"
     validate: bool = False
+    ship: bool = False
 
     # Source tracking
     manifest_path: str | None = None
@@ -167,5 +168,6 @@ def load_manifest(path: str) -> BuildManifest:
         max_iterations=int(frontmatter.get("max_iterations", 10)),
         agent=str(frontmatter.get("agent", "claude")),
         validate=bool(frontmatter.get("validate", False)),
+        ship=bool(frontmatter.get("ship", False)),
         manifest_path=str(manifest_path),
     )
