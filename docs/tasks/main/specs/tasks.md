@@ -229,12 +229,12 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
   - [x] Follows same formatting pattern as plan loops display
 
 #### [4.4] Notification
-- [ ] **4.4.1** Add `notify_ship_complete()` function to `notify.py` following `notify_plan_complete()` pattern. Message: `"Ship complete! {stages} stages in {time}"` (success) / `"Ship failed after {stages} stages ({time})"` (failure). Includes branch detection and audio. Wiring at call sites (main, resume, manifest) is handled by tasks 1.1.2, 4.1.2, and 4.2.2
+- [x] **4.4.1** Add `notify_ship_complete()` function to `notify.py` following `notify_plan_complete()` pattern. Message: `"Ship complete! {stages} stages in {time}"` (success) / `"Ship failed after {stages} stages ({time})"` (failure). Includes branch detection and audio. Wiring at call sites (main, resume, manifest) is handled by tasks 1.1.2, 4.1.2, and 4.2.2
   - **Produces**: `notify_ship_complete()` callable
   - **Consumed by**: `main()` ship block (1.1.2), `run_resume()` ship block (4.1.2), `run_manifest()` ship block (4.2.2)
   - **Replaces**: N/A (new notification function)
-  - [ ] Function follows same signature pattern as `notify_plan_complete()`
-  - [ ] Includes success and failure messaging with audio notification
+  - [x] Function follows same signature pattern as `notify_plan_complete()`
+  - [x] Includes success and failure messaging with audio notification
 
 ---
 
