@@ -39,7 +39,7 @@ Pipeline runs 6 stages autonomously:
 ```
 research → assess → [create_plan] → create_tasks → plan_review → req_validate
 ```
-Output: `docs/tasks/{branch}/build.md` manifest, then run `spectre-build build.md`.
+Output: `docs/tasks/{branch}/{scope_slug}/build.md` manifest, then run `spectre-build build.md`.
 
 ### Flow 2: LIGHT Complexity (skips plan generation)
 ```
@@ -104,21 +104,22 @@ research → assess ─── LIGHT ──────────────�
 
 All stages use `JsonCompletion` with `signal_field="status"`. End signals: `["PLAN_VALIDATED", "PLAN_READY"]`.
 
-### run_plan_pipeline() Function (cli.py:653-796)
+### run_plan_pipeline() Function (cli.py)
 
 ```python
 def run_plan_pipeline(
     context_files: list[str],
     max_iterations: int,
     agent: str = "claude",
-    output_dir: str | None = None,       # Default: docs/tasks/{branch}
+    output_dir: str | None = None,       # Default: docs/tasks/{branch}/{scope_slug}
+    scope_name: str | None = None,       # Scope slug for directory isolation
     resume_stage: str | None = None,      # Set to "update_docs" for resume
     resume_context: dict | None = None,   # Preserved context from session
-) -> tuple[int, int]:
+) -> tuple[int, int, str]:
 ```
 
 Key behaviors:
-1. **Output dir**: Auto-creates `docs/tasks/{branch}/`, `specs/`, `clarifications/` subdirs
+1. **Output dir**: Auto-creates `docs/tasks/{branch}/{scope_slug}/`, `specs/`, `clarifications/` subdirs. Each scope gets an isolated directory to prevent collisions between planning cycles.
 2. **Pipeline selection**: `resume_stage` → `create_plan_resume_pipeline()`, else → `create_plan_pipeline()`
 3. **Context dict**: Built fresh or restored from `resume_context`
 4. **CLARIFICATIONS_NEEDED handling**: Saves session, prints instructions, returns exit 0
@@ -129,7 +130,7 @@ Key behaviors:
 ```python
 context = {
     "context_files": "- `scope.md`\n- `notes.md`",   # Input scope docs
-    "output_dir": "/abs/path/docs/tasks/main",         # Artifact root
+    "output_dir": "/abs/path/docs/tasks/main/my_scope", # Artifact root (scope-isolated)
     "task_context_path": ".../task_context.md",         # Written by research
     "plan_path": ".../specs/plan.md",                   # Written by create_plan
     "tasks_path": ".../specs/tasks.md",                 # Written by create_tasks
@@ -159,14 +160,15 @@ context = {
 
 ### Session Persistence (cli.py:30-67)
 
-Planning adds 4 fields to session JSON:
+Planning adds 5 fields to session JSON:
 ```python
 save_session(
     tasks_file="",                              # Empty for --plan
     plan=True,                                  # Planning mode flag
-    plan_output_dir=output_dir,                 # Artifact directory
+    plan_output_dir=output_dir,                 # Artifact directory (scope-isolated)
     plan_context=context,                       # Full context dict for resume
     plan_clarifications_path=clarif_path,       # Path to clarifications file
+    plan_scope_name=scope_name,                 # Scope slug for directory isolation
     ...
 )
 ```
@@ -232,7 +234,8 @@ Trace: `req_validate` emits `CLARIFICATIONS_NEEDED` → `plan_after_stage()` sto
 
 ## Gotchas
 
-- **`--plan` without `--context` exits immediately**: Error at cli.py:1024-1026. No interactive fallback.
+- **Scope-based directory isolation**: Each planning cycle creates an isolated directory `docs/tasks/{branch}/{scope_slug}/`. The scope slug is derived from the first context file (stripping `scope_` prefix) or set explicitly via `--scope-name`. This prevents planning cycles from colliding when running multiple plan/build/ship cycles on the same branch. The `update_docs.md` prompt has a scope mismatch guard that detects when plan/tasks belong to a different scope.
+- **`--plan` without `--context` exits immediately**: Error at cli.py. No interactive fallback.
 - **Resume uses a separate pipeline config**: `create_plan_resume_pipeline()`, not a start-stage param on the main pipeline. The executor always starts at `start_stage`.
 - **Context dict is serialized to session JSON**: Must be JSON-serializable (no Path objects). All paths are strings.
 - **CLARIFICATIONS_NEEDED is NOT in `end_signals`**: The pipeline ends because there's no transition for it (empty transitions dict on req_validate). The CLI detects it by checking `state.stage_history[-1][1]`.
