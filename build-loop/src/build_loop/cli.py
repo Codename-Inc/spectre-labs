@@ -236,6 +236,12 @@ Examples:
     )
 
     parser.add_argument(
+        "--ship",
+        action="store_true",
+        help="Run ship pipeline: clean → test → rebase to land feature branch",
+    )
+
+    parser.add_argument(
         "--pipeline",
         type=str,
         help="Path to pipeline YAML definition file",
@@ -1284,8 +1290,38 @@ def main() -> None:
 
         sys.exit(exit_code)
 
+    # Handle --ship mode
+    if args.ship:
+        context_files = [normalize_path(f) for f in args.context] if args.context else []
+        context_files = [str(Path(f).resolve()) for f in context_files]
+        max_iterations = args.max_iterations
+        agent = args.agent
+        project_name = Path.cwd().name
+        start_time = time.time()
+
+        save_session("", context_files, max_iterations, agent=agent, ship=True)
+
+        exit_code, iterations_completed = run_ship_pipeline(
+            context_files=context_files,
+            max_iterations=max_iterations,
+            agent=agent,
+        )
+
+        duration = time.time() - start_time
+        duration_str = format_duration(duration)
+
+        if send_notification:
+            notify_ship_complete(
+                stages_completed=iterations_completed,
+                total_time=duration_str,
+                success=(exit_code == 0),
+                project=project_name,
+            )
+
+        sys.exit(exit_code)
+
     # Interactive mode selection (only when no flags provided)
-    if not args.plan and not args.pipeline and args.tasks is None:
+    if not args.plan and not args.ship and not args.pipeline and args.tasks is None:
         mode = prompt_for_mode()
         if mode == "plan":
             context_files = prompt_for_plan_context()

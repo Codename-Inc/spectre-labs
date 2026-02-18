@@ -72,20 +72,20 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
 ### Phase 1: CLI Routing and Orchestration
 
 #### [1.1] Add `--ship` Flag and Main Routing
-- [ ] **1.1.1** Add `--ship` as a `store_true` argument in `parse_args()` in `cli.py`, placed near `--plan` and `--validate`
+- [x] **1.1.1** Add `--ship` as a `store_true` argument in `parse_args()` in `cli.py`, placed near `--plan` and `--validate`
   - **Produces**: `args.ship` boolean flag available on parsed args
   - **Consumed by**: `main()` routing block, `run_manifest()`, interactive mode
   - **Replaces**: N/A (new flag)
-  - [ ] `--ship` appears in `spectre-build --help` with description
-  - [ ] `args.ship` is `False` by default when flag is not provided
+  - [x] `--ship` appears in `spectre-build --help` with description
+  - [x] `args.ship` is `False` by default when flag is not provided
 
-- [ ] **1.1.2** Add `--ship` routing block in `main()` after the `--plan` block but before `--validate`, following the same pattern: check flag → resolve optional context files → detect parent branch → save session → call `run_ship_pipeline()` → notify → sys.exit
+- [x] **1.1.2** Add `--ship` routing block in `main()` after the `--plan` block but before `--validate`, following the same pattern: check flag → resolve optional context files → detect parent branch → save session → call `run_ship_pipeline()` → notify → sys.exit
   - **Produces**: Execution path from CLI args to `run_ship_pipeline()`
   - **Consumed by**: End users invoking `spectre-build --ship`
   - **Replaces**: N/A (new routing path)
-  - [ ] `--ship` block executes when flag is set, skipping `--validate` and legacy paths
-  - [ ] Context files are resolved if provided via `--context` but are not required (no error without them)
-  - [ ] `notify_ship_complete()` is called after `run_ship_pipeline()` returns
+  - [x] `--ship` block executes when flag is set, skipping `--validate` and legacy paths
+  - [x] Context files are resolved if provided via `--context` but are not required (no error without them)
+  - [x] `notify_ship_complete()` is called after `run_ship_pipeline()` returns
 
 #### [1.2] Implement `run_ship_pipeline()` Function
 - [x] **1.2.1** Create `run_ship_pipeline()` function in `cli.py` with signature `(context_files, max_iterations, agent, resume_context) -> tuple[int, int]`, modeled on `run_plan_pipeline()`. Implements: parent branch detection (via `git merge-base` / `git log` heuristics, fail fast on failure), working set scope computation (`{parent_branch}..HEAD`), context dict assembly (keys: `parent_branch`, `working_set_scope`, `context_files`, `clean_summary`, `test_summary`), pipeline wiring (`create_ship_pipeline()`, `PipelineExecutor` with ship hooks and `create_ship_event_handler()`), and execution
