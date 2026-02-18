@@ -409,51 +409,131 @@ PLAN_RESEARCH_DENIED_TOOLS = [
 
 
 def create_ship_pipeline(max_iterations: int = 10) -> PipelineConfig:
-    """Create a ship pipeline: clean -> test -> rebase.
+    """Create an 8-stage ship pipeline for landing feature branches.
 
     The ship pipeline takes a feature branch from "works on branch" to
-    "landed on main" by running three stages autonomously:
-    - Clean: dead code removal, lint, duplication analysis (7 tasks)
-    - Test: risk-tiered test coverage (4 tasks)
-    - Rebase: rebase onto parent, resolve conflicts, land via PR or merge (single context window)
+    "landed on main" by running eight sub-stages autonomously:
+
+    Clean group (discover → investigate → execute):
+      - Discover: scope + dead code + duplication analysis
+      - Investigate: parallel subagent investigation of SUSPECT findings
+      - Execute: apply approved changes + lint compliance
+
+    Test group (plan → execute → verify → commit):
+      - Plan: working set discovery + risk assessment + batching strategy
+      - Execute: parallel subagent test writing by risk tier
+      - Verify: run suite, diagnose/fix failures, re-verify
+      - Commit: stage and commit all test files
+
+    Rebase: rebase onto parent, resolve conflicts, land via PR or merge
 
     Args:
-        max_iterations: Max iterations for clean and test stages.
-            Rebase is capped at min(max_iterations, 3) since conflict
-            resolution requires continuous context.
+        max_iterations: Max iterations for most stages.
+            test_verify and rebase are capped at min(max_iterations, 3).
+            test_commit is always 1.
 
     Returns:
-        PipelineConfig for the 3-stage ship workflow.
+        PipelineConfig for the 8-stage ship workflow.
     """
     prompts_dir = Path(__file__).parent.parent / "prompts" / "shipping"
+    verify_max = min(max_iterations, 3)
     rebase_max = min(max_iterations, 3)
 
     stages = {
-        "clean": StageConfig(
-            name="clean",
-            prompt_template=str(prompts_dir / "clean.md"),
+        "clean_discover": StageConfig(
+            name="clean_discover",
+            prompt_template=str(prompts_dir / "clean_discover.md"),
             completion=JsonCompletion(
-                complete_statuses=["CLEAN_TASK_COMPLETE", "CLEAN_COMPLETE"],
+                complete_statuses=["CLEAN_DISCOVER_TASK_COMPLETE", "CLEAN_DISCOVER_COMPLETE"],
                 signal_field="status",
             ),
             max_iterations=max_iterations,
             transitions={
-                "CLEAN_TASK_COMPLETE": "clean",
-                "CLEAN_COMPLETE": "test",
+                "CLEAN_DISCOVER_TASK_COMPLETE": "clean_discover",
+                "CLEAN_DISCOVER_COMPLETE": "clean_investigate",
             },
             denied_tools=PLAN_DENIED_TOOLS,
         ),
-        "test": StageConfig(
-            name="test",
-            prompt_template=str(prompts_dir / "test.md"),
+        "clean_investigate": StageConfig(
+            name="clean_investigate",
+            prompt_template=str(prompts_dir / "clean_investigate.md"),
             completion=JsonCompletion(
-                complete_statuses=["TEST_TASK_COMPLETE", "TEST_COMPLETE"],
+                complete_statuses=["CLEAN_INVESTIGATE_TASK_COMPLETE", "CLEAN_INVESTIGATE_COMPLETE"],
                 signal_field="status",
             ),
             max_iterations=max_iterations,
             transitions={
-                "TEST_TASK_COMPLETE": "test",
-                "TEST_COMPLETE": "rebase",
+                "CLEAN_INVESTIGATE_TASK_COMPLETE": "clean_investigate",
+                "CLEAN_INVESTIGATE_COMPLETE": "clean_execute",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "clean_execute": StageConfig(
+            name="clean_execute",
+            prompt_template=str(prompts_dir / "clean_execute.md"),
+            completion=JsonCompletion(
+                complete_statuses=["CLEAN_EXECUTE_TASK_COMPLETE", "CLEAN_EXECUTE_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=max_iterations,
+            transitions={
+                "CLEAN_EXECUTE_TASK_COMPLETE": "clean_execute",
+                "CLEAN_EXECUTE_COMPLETE": "test_plan",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "test_plan": StageConfig(
+            name="test_plan",
+            prompt_template=str(prompts_dir / "test_plan.md"),
+            completion=JsonCompletion(
+                complete_statuses=["TEST_PLAN_TASK_COMPLETE", "TEST_PLAN_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=max_iterations,
+            transitions={
+                "TEST_PLAN_TASK_COMPLETE": "test_plan",
+                "TEST_PLAN_COMPLETE": "test_execute",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "test_execute": StageConfig(
+            name="test_execute",
+            prompt_template=str(prompts_dir / "test_execute.md"),
+            completion=JsonCompletion(
+                complete_statuses=["TEST_EXECUTE_TASK_COMPLETE", "TEST_EXECUTE_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=max_iterations,
+            transitions={
+                "TEST_EXECUTE_TASK_COMPLETE": "test_execute",
+                "TEST_EXECUTE_COMPLETE": "test_verify",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "test_verify": StageConfig(
+            name="test_verify",
+            prompt_template=str(prompts_dir / "test_verify.md"),
+            completion=JsonCompletion(
+                complete_statuses=["TEST_VERIFY_TASK_COMPLETE", "TEST_VERIFY_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=verify_max,
+            transitions={
+                "TEST_VERIFY_TASK_COMPLETE": "test_verify",
+                "TEST_VERIFY_COMPLETE": "test_commit",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "test_commit": StageConfig(
+            name="test_commit",
+            prompt_template=str(prompts_dir / "test_commit.md"),
+            completion=JsonCompletion(
+                complete_statuses=["TEST_COMMIT_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=1,
+            transitions={
+                "TEST_COMMIT_COMPLETE": "rebase",
             },
             denied_tools=PLAN_DENIED_TOOLS,
         ),
@@ -474,7 +554,7 @@ def create_ship_pipeline(max_iterations: int = 10) -> PipelineConfig:
         name="ship",
         description="Ship pipeline: clean, test, rebase to land feature branch",
         stages=stages,
-        start_stage="clean",
+        start_stage="clean_discover",
         end_signals=["SHIP_COMPLETE"],
     )
 

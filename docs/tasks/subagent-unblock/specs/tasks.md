@@ -172,16 +172,16 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
 ### Phase 4: Update Pipeline Config and Hooks
 
 #### [4.1] Rewrite `create_ship_pipeline()` for 8 Sub-Stages
-- [ ] **4.1.1** Replace the 3-stage definition in `create_ship_pipeline()` in `build-loop/src/build_loop/pipeline/loader.py` (lines 413-481) with 8 stages: `clean_discover`, `clean_investigate`, `clean_execute`, `test_plan`, `test_execute`, `test_verify`, `test_commit`, `rebase`
+- [x] **4.1.1** Replace the 3-stage definition in `create_ship_pipeline()` in `build-loop/src/build_loop/pipeline/loader.py` (lines 413-481) with 8 stages: `clean_discover`, `clean_investigate`, `clean_execute`, `test_plan`, `test_execute`, `test_verify`, `test_commit`, `rebase`
   - **Produces**: `PipelineConfig` with 8 stages, correct signals, transitions, and iteration limits
   - **Consumed by**: `run_ship_pipeline()` in `cli.py`, `PipelineExecutor`
   - **Replaces**: Previous 3-stage `create_ship_pipeline()` factory
-  - [ ] `start_stage="clean_discover"`
-  - [ ] `end_signals=["SHIP_COMPLETE"]`
-  - [ ] Transition chain: clean_discover→clean_investigate→clean_execute→test_plan→test_execute→test_verify→test_commit→rebase→(end)
-  - [ ] Iteration limits: clean_discover/clean_investigate/clean_execute/test_plan/test_execute use `max_iterations`; test_verify uses `min(max_iterations, 3)`; test_commit uses `1`; rebase uses `min(max_iterations, 3)`
-  - [ ] All stages use `PLAN_DENIED_TOOLS` for denied_tools (Task no longer in that list)
-  - [ ] Each stage references its corresponding new prompt template file
+  - [x] `start_stage="clean_discover"`
+  - [x] `end_signals=["SHIP_COMPLETE"]`
+  - [x] Transition chain: clean_discover→clean_investigate→clean_execute→test_plan→test_execute→test_verify→test_commit→rebase→(end)
+  - [x] Iteration limits: clean_discover/clean_investigate/clean_execute/test_plan/test_execute use `max_iterations`; test_verify uses `min(max_iterations, 3)`; test_commit uses `1`; rebase uses `min(max_iterations, 3)`
+  - [x] All stages use `PLAN_DENIED_TOOLS` for denied_tools (Task no longer in that list)
+  - [x] Each stage references its corresponding new prompt template file
 
 #### [4.2] Update Ship Hooks for New Sub-Stage Names
 - [ ] **4.2.1** Update `ship_before_stage()` in `build-loop/src/build_loop/hooks.py` to snapshot HEAD at `clean_discover` and `test_plan` (start of each logical group), no-op for all other sub-stages

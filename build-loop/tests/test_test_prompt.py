@@ -105,7 +105,7 @@ class TestTestPromptSubstitution:
     def test_substitution_replaces_all_variables(self):
         """Happy: All template variables are replaced when context is provided."""
         config = create_ship_pipeline()
-        test_config = config.stages["test"]
+        test_config = config.stages["test_plan"]
         stage = Stage(config=test_config, runner=None)
 
         context = {
@@ -122,7 +122,7 @@ class TestTestPromptSubstitution:
     def test_substitution_missing_variable_leaves_placeholder(self):
         """Failure: Missing context variables leave {placeholder} in output."""
         config = create_ship_pipeline()
-        test_config = config.stages["test"]
+        test_config = config.stages["test_plan"]
         stage = Stage(config=test_config, runner=None)
 
         prompt = stage.build_prompt({})
