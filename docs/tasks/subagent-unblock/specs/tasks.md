@@ -124,15 +124,15 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
 ### Phase 3: Expand Test Stage → 4 Sub-Stages
 
 #### [3.1] Create `test_plan.md` Prompt Template with Batching Strategy
-- [ ] **3.1.1** Create `build-loop/src/build_loop/prompts/shipping/test_plan.md` containing Tasks 1-2 from current `test.md`, enhanced with parallelization strategy output modeled after original `/spectre:test` Step 2 (`/Users/joe/Dev/spectre/plugins/spectre/commands/test.md` lines 243-273)
+- [x] **3.1.1** Create `build-loop/src/build_loop/prompts/shipping/test_plan.md` containing Tasks 1-2 from current `test.md`, enhanced with parallelization strategy output modeled after original `/spectre:test` Step 2 (`/Users/joe/Dev/spectre/plugins/spectre/commands/test.md` lines 243-273)
   - **Produces**: Prompt template for test planning sub-stage (discovery + risk assessment + batching plan)
   - **Consumed by**: `create_ship_pipeline()` stage config, `Stage.build_prompt()`
   - **Replaces**: Tasks 1-2 section of monolithic `test.md`
-  - [ ] Contains Task 1 (Discover Working Set and Plan) and Task 2 (Risk Assessment and Test Plan)
-  - [ ] Task 2 includes batching heuristics output: P0=1 file/agent, P1=2-3 files/agent, P2=3-5 files/agent, P3=SKIP
-  - [ ] Includes the full risk-weighted testing framework (P0-P3 definitions, test quality requirements, mutation testing mindset) from current `test.md`
-  - [ ] Completion signals: `TEST_PLAN_TASK_COMPLETE` (loop) and `TEST_PLAN_COMPLETE` (transition to test_execute)
-  - [ ] Uses `{working_set_scope}`, `{context_files}` template variables
+  - [x] Contains Task 1 (Discover Working Set and Plan) and Task 2 (Risk Assessment and Test Plan)
+  - [x] Task 2 includes batching heuristics output: P0=1 file/agent, P1=2-3 files/agent, P2=3-5 files/agent, P3=SKIP
+  - [x] Includes the full risk-weighted testing framework (P0-P3 definitions, test quality requirements, mutation testing mindset) from current `test.md`
+  - [x] Completion signals: `TEST_PLAN_TASK_COMPLETE` (loop) and `TEST_PLAN_COMPLETE` (transition to test_execute)
+  - [x] Uses `{working_set_scope}`, `{context_files}` template variables
 
 #### [3.2] Create `test_execute.md` Prompt Template with Subagent Dispatch
 - [ ] **3.2.1** Create `build-loop/src/build_loop/prompts/shipping/test_execute.md` with parallel @spectre:tester subagent dispatch modeled after original `/spectre:test` Step 3 (`/Users/joe/Dev/spectre/plugins/spectre/commands/test.md` lines 275-305)
