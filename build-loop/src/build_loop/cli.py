@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .loop import run_build_loop
-from .notify import notify_build_complete, notify_build_error
+from .notify import notify_build_complete, notify_build_error, notify_plan_complete
 
 # Session file location
 SESSION_FILE = ".spectre/build-session.json"
@@ -221,6 +221,12 @@ Examples:
     )
 
     parser.add_argument(
+        "--build",
+        action="store_true",
+        help="Auto-start build after planning completes (use with --plan)",
+    )
+
+    parser.add_argument(
         "--pipeline",
         type=str,
         help="Path to pipeline YAML definition file",
@@ -330,6 +336,33 @@ def prompt_for_validate() -> bool:
     print("Run validation after build? [y/N]: ", end="")
     response = input().strip().lower()
     return response in ("y", "yes")
+
+
+def prompt_for_mode() -> str:
+    """Interactively prompt for execution mode."""
+    print("Mode [build/plan] (build): ", end="")
+    response = input().strip().lower()
+
+    if not response:
+        return "build"
+
+    if response in ("build", "plan"):
+        return response
+
+    print(f"Invalid choice. Using default: build")
+    return "build"
+
+
+def prompt_for_plan_context() -> list[str]:
+    """Interactively prompt for required scope/context files for plan mode."""
+    print("Scope/context files (comma-separated): ", end="")
+    response = input().strip()
+
+    if not response:
+        return []
+
+    paths = [p.strip() for p in response.split(",")]
+    return [p for p in paths if p]
 
 
 def validate_inputs(
@@ -657,7 +690,7 @@ def run_plan_pipeline(
     output_dir: str | None = None,
     resume_stage: str | None = None,
     resume_context: dict | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, int, str]:
     """Run the planning pipeline: scope docs → build-ready manifest.
 
     Creates a multi-stage pipeline (research → assess → [create_plan] →
@@ -675,12 +708,13 @@ def run_plan_pipeline(
         resume_context: Preserved context dict from a prior session
 
     Returns:
-        Tuple of (exit_code, total_iterations_completed)
+        Tuple of (exit_code, total_iterations_completed, manifest_path)
     """
     import subprocess as _subprocess
 
     from .agent import get_agent
     from .hooks import plan_after_stage, plan_before_stage
+    from .notify import notify
     from .pipeline.executor import PipelineExecutor, PipelineStatus
     from .pipeline.loader import create_plan_pipeline, create_plan_resume_pipeline
     from .stats import BuildStats, create_plan_event_handler
@@ -689,7 +723,7 @@ def run_plan_pipeline(
     runner = get_agent(agent)
     if not runner.check_available():
         print(f"❌ ERROR: {runner.name} CLI not found", file=sys.stderr)
-        return 127, 0
+        return 127, 0, ""
 
     # Determine output directory
     if not output_dir:
@@ -765,6 +799,11 @@ def run_plan_pipeline(
         print(f"   Then: spectre-build resume")
         print(f"{'='*60}\n")
 
+        notify(
+            message="Clarifications needed — edit the file and resume",
+            subtitle="Plan Pipeline Paused",
+        )
+
         # Save session for resume
         save_session(
             tasks_file="",
@@ -777,10 +816,16 @@ def run_plan_pipeline(
             plan_clarifications_path=clarif_path,
         )
 
-        return 0, state.total_iterations
+        return 0, state.total_iterations, ""
 
     # Pipeline completed normally
     manifest_path = state.global_artifacts.get("manifest_path", "")
+    if not manifest_path:
+        # Derive from output_dir if not in artifacts
+        candidate = str(Path(output_dir) / "build.md")
+        if Path(candidate).is_file():
+            manifest_path = candidate
+
     if manifest_path:
         print(f"\n{'='*60}")
         print("✅ PLANNING COMPLETE")
@@ -789,11 +834,11 @@ def run_plan_pipeline(
         print(f"{'='*60}\n")
 
     if state.status == PipelineStatus.COMPLETED:
-        return 0, state.total_iterations
+        return 0, state.total_iterations, manifest_path
     elif state.status == PipelineStatus.STOPPED:
-        return 130, state.total_iterations
+        return 130, state.total_iterations, ""
     else:
-        return 1, state.total_iterations
+        return 1, state.total_iterations, ""
 
 
 def run_resume(args: argparse.Namespace) -> None:
@@ -846,7 +891,7 @@ def run_resume(args: argparse.Namespace) -> None:
             plan_clarifications_path=session.get("plan_clarifications_path"),
         )
 
-        exit_code, iterations_completed = run_plan_pipeline(
+        exit_code, iterations_completed, _manifest = run_plan_pipeline(
             context_files=context_files,
             max_iterations=max_iterations,
             agent=agent,
@@ -888,12 +933,20 @@ def run_resume(args: argparse.Namespace) -> None:
 
     # Send notification if enabled
     if send_notification:
-        notify_build_complete(
-            tasks_completed=iterations_completed,
-            total_time=duration_str,
-            success=(exit_code == 0),
-            project=project_name,
-        )
+        if session.get("plan"):
+            notify_plan_complete(
+                stages_completed=iterations_completed,
+                total_time=duration_str,
+                success=(exit_code == 0),
+                project=project_name,
+            )
+        else:
+            notify_build_complete(
+                tasks_completed=iterations_completed,
+                total_time=duration_str,
+                success=(exit_code == 0),
+                project=project_name,
+            )
 
     sys.exit(exit_code)
 
@@ -1034,7 +1087,7 @@ def main() -> None:
 
         save_session("", context_files, max_iterations, agent=agent, plan=True)
 
-        exit_code, iterations_completed = run_plan_pipeline(
+        exit_code, iterations_completed, manifest_path = run_plan_pipeline(
             context_files=context_files,
             max_iterations=max_iterations,
             agent=agent,
@@ -1044,14 +1097,61 @@ def main() -> None:
         duration_str = format_duration(duration)
 
         if send_notification:
-            notify_build_complete(
-                tasks_completed=iterations_completed,
+            notify_plan_complete(
+                stages_completed=iterations_completed,
                 total_time=duration_str,
                 success=(exit_code == 0),
                 project=project_name,
             )
 
+        # Chain to build if --build flag set and plan succeeded
+        if exit_code == 0 and manifest_path and args.build:
+            print(f"\n🔗 Auto-starting build from manifest: {manifest_path}\n")
+            run_manifest(manifest_path, args)  # calls sys.exit internally
+
         sys.exit(exit_code)
+
+    # Interactive mode selection (only when no flags provided)
+    if not args.plan and not args.pipeline and args.tasks is None:
+        mode = prompt_for_mode()
+        if mode == "plan":
+            context_files = prompt_for_plan_context()
+            if not context_files:
+                print("Error: Plan mode requires at least one context/scope file.", file=sys.stderr)
+                sys.exit(1)
+            context_files = [str(Path(normalize_path(f)).resolve()) for f in context_files]
+            max_iterations = prompt_for_max_iterations()
+            agent = prompt_for_agent()
+            project_name = Path.cwd().name
+            start_time = time.time()
+
+            save_session("", context_files, max_iterations, agent=agent, plan=True)
+
+            exit_code, iterations_completed, manifest_path = run_plan_pipeline(
+                context_files=context_files,
+                max_iterations=max_iterations,
+                agent=agent,
+            )
+
+            duration = time.time() - start_time
+            duration_str = format_duration(duration)
+
+            if send_notification:
+                notify_plan_complete(
+                    stages_completed=iterations_completed,
+                    total_time=duration_str,
+                    success=(exit_code == 0),
+                    project=project_name,
+                )
+
+            # Prompt to chain to build if plan succeeded
+            if exit_code == 0 and manifest_path:
+                print("Start build now? [y/N]: ", end="")
+                if input().strip().lower() in ("y", "yes"):
+                    print(f"\n🔗 Starting build from manifest: {manifest_path}\n")
+                    run_manifest(manifest_path, args)  # calls sys.exit internally
+
+            sys.exit(exit_code)
 
     # Get tasks file - from args or interactive prompt
     tasks_file = args.tasks

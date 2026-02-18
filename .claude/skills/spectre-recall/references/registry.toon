@@ -2,3 +2,4 @@
 # Format: skill-name|category|triggers|description
 
 feature-build-loop|feature|build loop, spectre-build, build iteration, validation cycle, promise tags, build stats, build dashboard, token tracking, code review, phase awareness, git scope, hooks|Use when modifying build loop code, debugging stats/token tracking, adding CLI features, changing iteration prompts, or understanding how spectre-build works end-to-end
+feature-plan-pipeline|feature|plan pipeline, --plan, planning loop, plan stages, clarifications, plan resume, scope to manifest, run_plan_pipeline, create_plan_pipeline|Use when modifying the planning pipeline, debugging plan stages, changing clarification flow, or understanding how spectre-build --plan works end-to-end

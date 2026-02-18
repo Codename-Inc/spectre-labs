@@ -1,7 +1,15 @@
 {
-  "tasks_file": "/Users/joe/Dev/spectre-labs/build-loop/test-tasks.md",
+  "tasks_file": "",
   "context_files": [],
-  "max_iterations": 1,
-  "started_at": "2026-01-26T17:05:53.911499+00:00",
+  "max_iterations": 10,
+  "agent": "claude",
+  "validate": false,
+  "manifest_path": null,
+  "pipeline_path": null,
+  "plan": true,
+  "plan_output_dir": null,
+  "plan_context": null,
+  "plan_clarifications_path": null,
+  "started_at": "2026-02-17T19:10:43.571703+00:00",
   "cwd": "/Users/joe/Dev/spectre-labs/build-loop"
 }

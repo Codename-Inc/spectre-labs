@@ -26,6 +26,12 @@ spectre-build --tasks tasks.md --context scope.md --max-iterations 10
 # With code review + validation (recommended)
 spectre-build --tasks tasks.md --context scope.md --validate
 
+# Plan mode — scope docs to build-ready manifest
+spectre-build --plan --context scope.md design_notes.md
+
+# Plan then auto-start build
+spectre-build --plan --context scope.md --build
+
 # Using a pipeline YAML definition
 spectre-build --pipeline .spectre/pipelines/full-feature.yaml --tasks tasks.md
 
@@ -41,6 +47,7 @@ spectre-build serve
 
 ### Features
 
+- **Planning pipeline** — Autonomous scope-to-manifest planning with complexity assessment and human-in-the-loop clarifications
 - **Code review gate** — Automated review between build and validation catches issues early
 - **Phase-aware builds** — Multi-phase task plans get reviewed and validated per phase boundary
 - **Validation cycles** — Post-build gap analysis (D!=C!=R) with automatic remediation
@@ -51,7 +58,82 @@ spectre-build serve
 - **TDD integration** — Loads `spectre-tdd` skill for test-driven execution
 - **Web GUI** — FastAPI server with real-time WebSocket streaming
 
-### How It Works
+### Planning Pipeline
+
+`--plan` transforms scope documents into a build-ready manifest. Instead of writing tasks by hand, provide scope/design docs and the pipeline produces a structured task breakdown you can feed directly into the build loop.
+
+```
+spectre-build --plan --context scope.md
+```
+
+The pipeline runs 6 stages autonomously:
+
+```
+Research → Assess → [Create Plan] → Create Tasks → Plan Review → Req Validate
+                                                                       |
+                                                          PLAN_VALIDATED → build.md
+                                                    CLARIFICATIONS_NEEDED → pause
+```
+
+**Research** — Explores the codebase, identifies key files, architecture patterns, and dependencies. Writes `task_context.md`.
+
+**Assess** — Scores complexity and routes to the right depth:
+- `LIGHT` — Simple tasks skip plan generation, go straight to task breakdown
+- `STANDARD` — Normal planning depth
+- `COMPREHENSIVE` — Deep analysis with architecture diagrams and risk matrices
+
+**Create Plan** — Writes an implementation plan with technical approach, critical files, and change boundaries. Skipped for LIGHT tasks.
+
+**Create Tasks** — Breaks the plan into phased, ordered tasks with YAML frontmatter for the build manifest.
+
+**Plan Review** — Catches over-engineering, unnecessary abstractions, and scope creep.
+
+**Req Validate** — Cross-references the scope docs against the plan and tasks. Two outcomes:
+- `PLAN_VALIDATED` — Everything covered. Writes `build.md` manifest. Pipeline ends.
+- `CLARIFICATIONS_NEEDED` — Gaps found. Writes a clarifications file, saves session, and pauses for human input.
+
+#### Human-in-the-Loop Clarifications
+
+When the pipeline needs input, it pauses and notifies you:
+
+```
+📋 CLARIFICATIONS NEEDED
+   Edit: docs/tasks/main/clarifications/scope_clarifications.md
+   Then: spectre-build resume
+```
+
+Edit the file to answer the questions, then resume. The `update_docs` stage incorporates your answers and produces the final manifest.
+
+#### Plan to Build
+
+After planning completes, start the build:
+
+```bash
+# Manual — review artifacts first, then run the manifest
+spectre-build docs/tasks/main/build.md
+
+# Automatic — chain directly with --build flag
+spectre-build --plan --context scope.md --build
+
+# Interactive — plan mode prompts "Start build now?" on completion
+spectre-build
+# → Mode [build/plan]: plan
+```
+
+Output artifacts land in `docs/tasks/{branch}/`:
+
+```
+docs/tasks/main/
+├── build.md                          # Build manifest (YAML frontmatter)
+├── task_context.md                   # Research findings
+├── specs/
+│   ├── plan.md                       # Implementation plan
+│   └── tasks.md                      # Task breakdown
+└── clarifications/
+    └── scope_clarifications.md       # (if needed)
+```
+
+### Build Pipeline
 
 With `--validate`, spectre-build runs a 3-stage pipeline:
 

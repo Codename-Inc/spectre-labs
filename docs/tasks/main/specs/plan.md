@@ -1,266 +1,62 @@
-# Implementation Plan: Planning Pipeline (`--plan`)
+# Implementation Plan: `--dry-run` Flag
 
-*Standard depth | Generated 2026-02-09*
+*Light depth | Generated 2026-02-17*
 
 ## Overview
 
-Add a `--plan` flag to `spectre-build` that runs a multi-stage planning pipeline, transforming scope documents into a build-ready manifest. The pipeline decomposes the interactive `/spectre:plan` workflow into independent stages — each reading and writing files — leveraging the existing pipeline executor with no changes to the core engine.
+Add a `--dry-run` flag to `spectre-build` that prints what pipeline stages and transitions would execute, then exits without invoking any agent. This is a CLI-only change — no prompt templates, completion strategies, hooks, or executor changes needed.
 
 ## Desired End State
 
 ```bash
-# User provides scope docs, gets back a build manifest
-spectre-build --plan --context scope.md design_notes.md
+# Show what --validate would do without running anything
+spectre-build --dry-run --validate --tasks tasks.md
 
-# Pipeline runs autonomously:
-#   research → assess → [create_plan] → create_tasks → plan_review → req_validate
-#
-# If clarifications needed:
-#   → saves session, exits
-#   → user edits scope_clarifications.md
-#   → spectre-build resume
-#   → update_docs stage incorporates answers
-#   → outputs build.md manifest
+# Show what --plan would do
+spectre-build --dry-run --plan --context scope.md
 
-# Then:
-spectre-build build.md
+# Show what a manifest would do
+spectre-build --dry-run build.md
+
+# Show what resume would do
+spectre-build --dry-run resume
 ```
 
-- `--plan` works without `--tasks` (tasks are generated, not provided)
-- Complexity assessment honors LIGHT/STANDARD/COMPREHENSIVE routing
-- LIGHT skips `create_plan`, goes straight to `create_tasks`
-- Resume after clarifications runs an `update_docs` stage that modifies scope/plan/tasks, then outputs the manifest
-- Final artifact is a manifest `.md` with YAML frontmatter
+Each prints a human-readable summary of pipeline stages, transitions, and end signals, then exits with code 0. No agents are invoked.
 
 ## Out of Scope
 
-- Auto-continue into build loop (`--plan --build` is future work)
-- Custom pipeline YAML for planning
-- Web GUI support
-- Changes to main Spectre repo interactive prompts
-- Executor or stage changes (reuse as-is)
+- Changes to pipeline executor, stage behavior, or prompt templates
+- Changes to completion strategies, hooks, or agent runners
+- Verbose/debug output modes for dry-run
+- Machine-readable (JSON) dry-run output
 
 ## Technical Approach
 
-### Pipeline Structure (7 stages, 6 in normal flow + 1 for resume)
+### 1. Flag + Formatting Utility
 
-```
-                                    Normal flow
-                                    ══════════
-research → assess ─── LIGHT ──────────────────→ create_tasks → plan_review → req_validate
-                  ├── STANDARD ───────→ create_plan ─→ create_tasks → plan_review → req_validate
-                  └── COMPREHENSIVE ──→ create_plan ─→ create_tasks → plan_review → req_validate
+Add `--dry-run` to `parse_args()` in `cli.py` as `action="store_true"` (same pattern as `--plan`). Create a `format_pipeline_plan(config: PipelineConfig) -> str` function that walks from `start_stage` through transitions, printing stage names, transition signals, and end signals.
 
-                                    Resume flow (after clarifications)
-                                    ════════════════════════════════
-                                    update_docs → PLAN_READY (end signal, manifest written)
-```
+### 2. Interception Points
 
-### Stage Definitions
+Check `args.dry_run` in each execution path after the pipeline config is built but before execution begins:
 
-| Stage | Completion | Signals | Max Iter | Transitions |
-|-------|-----------|---------|----------|-------------|
-| **research** | JSON | `RESEARCH_COMPLETE` | 1 | → assess |
-| **assess** | JSON | `LIGHT`, `STANDARD`, `COMPREHENSIVE` | 1 | LIGHT→create_tasks, STANDARD→create_plan, COMPREHENSIVE→create_plan |
-| **create_plan** | JSON | `PLAN_COMPLETE` | 1 | → create_tasks |
-| **create_tasks** | JSON | `TASKS_COMPLETE` | 1 | → plan_review |
-| **plan_review** | JSON | `REVIEW_COMPLETE` | 1 | → req_validate |
-| **req_validate** | JSON | `PLAN_VALIDATED`, `CLARIFICATIONS_NEEDED` | 1 | PLAN_VALIDATED ends pipeline; CLARIFICATIONS_NEEDED ends pipeline (CLI handles pause) |
-| **update_docs** | JSON | `PLAN_READY` | 1 | PLAN_READY ends pipeline |
+| Path | Function | Config Source |
+|------|----------|---------------|
+| `--plan` | `main()` | `create_plan_pipeline()` |
+| `--pipeline` | `main()` | `load_pipeline()` |
+| `--validate` | `main()` | `create_default_pipeline()` |
+| Legacy (no flags) | `main()` | No config — print simple build loop description |
+| Resume | `run_resume()` | Rebuilt from session state |
+| Manifest | `run_manifest()` | Rebuilt from manifest settings |
 
-All stages use `JsonCompletion` with `signal_field="status"` for consistency. Each stage emits a JSON block at the end of its output:
+Each interception: build config → `format_pipeline_plan()` → `print()` → `sys.exit(0)`.
 
-```json
-{
-  "status": "RESEARCH_COMPLETE",
-  "summary": "Found 12 relevant files, 3 integration patterns",
-  "artifacts": { ... }
-}
-```
-
-### Context Variables (shared across stages)
-
-```python
-context = {
-    # Input paths
-    "context_files": "- `scope.md`\n- `design_notes.md`",
-    "output_dir": "/abs/path/to/docs/tasks/main",
-
-    # Generated by research stage
-    "task_context_path": "/abs/path/to/docs/tasks/main/task_context.md",
-
-    # Generated by assess stage (via artifacts → context flow)
-    "depth": "standard",           # or "light", "comprehensive"
-    "tier": "STANDARD",            # or "LIGHT", "COMPREHENSIVE"
-
-    # Generated by create_plan stage
-    "plan_path": "/abs/path/to/docs/tasks/main/specs/plan.md",
-
-    # Generated by create_tasks stage
-    "tasks_path": "/abs/path/to/docs/tasks/main/specs/tasks.md",
-
-    # Generated by req_validate stage (if clarifications needed)
-    "clarifications_path": "/abs/path/to/.../scope_clarifications.md",
-
-    # Generated by update_docs or req_validate (final output)
-    "manifest_path": "/abs/path/to/docs/tasks/main/build.md",
-}
-```
-
-### CLI Routing
-
-```python
-# In main():
-if args.plan:
-    exit_code, iterations = run_plan_pipeline(
-        context_files=context_files,
-        max_iterations=max_iterations,
-        agent=agent,
-    )
-
-# In run_resume():
-if session.get("plan"):
-    exit_code, iterations = run_plan_pipeline(
-        context_files=session["context_files"],
-        max_iterations=session["max_iterations"],
-        agent=session.get("agent", "claude"),
-        resume_stage="update_docs",  # Jump to update_docs on resume
-        resume_context=session.get("plan_context"),  # Preserved context
-    )
-```
-
-### Session Extension
-
-```python
-save_session(
-    tasks_file="",  # Empty for --plan (tasks are generated)
-    context_files=context_files,
-    max_iterations=max_iterations,
-    agent=agent,
-    plan=True,                              # NEW: planning mode flag
-    plan_output_dir=output_dir,             # NEW: where artifacts live
-    plan_context=context,                   # NEW: context dict for resume
-    plan_clarifications_path=clarif_path,   # NEW: path to clarifications file
-)
-```
-
-### Resume Flow
-
-1. `spectre-build resume` loads session, sees `plan=True`
-2. Shows confirmation: "Planning session paused for clarifications at `{path}`"
-3. Routes to `run_plan_pipeline()` with `resume_stage="update_docs"`
-4. Pipeline starts at `update_docs` stage (not `research`)
-5. `update_docs` reads clarification answers, updates scope/plan/tasks docs
-6. Writes manifest `.md`, emits `PLAN_READY`
-7. Pipeline ends, prints manifest path + `spectre-build` command
-
-### Resume Implementation
-
-The pipeline executor always starts at `start_stage`. For resume, we use a separate pipeline config:
-
-```python
-def create_plan_resume_pipeline(...) -> PipelineConfig:
-    """Single-stage pipeline for post-clarification resume."""
-    stages = {
-        "update_docs": StageConfig(
-            name="update_docs",
-            prompt_template=str(prompts_dir / "planning" / "update_docs.md"),
-            completion=JsonCompletion(
-                complete_statuses=["PLAN_READY"],
-                signal_field="status",
-            ),
-            max_iterations=1,
-            transitions={},
-        ),
-    }
-    return PipelineConfig(
-        name="plan-resume",
-        description="Resume planning after clarifications",
-        stages=stages,
-        start_stage="update_docs",
-        end_signals=["PLAN_READY"],
-    )
-```
-
-This avoids modifying the executor to support arbitrary start stages.
-
-### Tool Filtering
-
-- **Research stage**: Allow `WebSearch` and `WebFetch` (user requested for external API docs)
-- **All other stages**: Same restrictions as build loop (no WebSearch, WebFetch, Task, AskUserQuestion, etc.)
-
-This means the research stage needs a different `allowed_tools` / `denied_tools` config on its `StageConfig`. The existing `StageConfig` already supports `allowed_tools` and `denied_tools` fields — they're passed through to the agent runner.
-
-### Hooks
-
-Planning-specific hooks (in `hooks.py`):
-
-```python
-def plan_before_stage(stage_name: str, context: dict[str, Any]) -> None:
-    """Inject stage-specific context for planning pipeline."""
-    if stage_name == "create_plan":
-        # Ensure depth is available from assess artifacts
-        if "depth" not in context:
-            context["depth"] = "standard"  # Safe default
-
-    if stage_name == "update_docs":
-        # Read clarification file and inject content
-        clarif_path = context.get("clarifications_path")
-        if clarif_path and Path(clarif_path).exists():
-            context["clarification_answers"] = Path(clarif_path).read_text()
-
-def plan_after_stage(
-    stage_name: str,
-    context: dict[str, Any],
-    result: CompletionResult,
-) -> None:
-    """Capture artifacts from planning stages into context."""
-    # Artifacts from JsonCompletion are auto-merged by executor
-    # This hook handles any extra context injection needed
-
-    if stage_name == "assess":
-        # Ensure depth flows to create_plan prompt
-        context.setdefault("depth", result.artifacts.get("depth", "standard"))
-        context.setdefault("tier", result.artifacts.get("tier", "STANDARD"))
-```
-
-### Manifest Output Format
-
-The final stage (req_validate or update_docs) writes a manifest `.md`:
-
-```markdown
----
-tasks: docs/tasks/main/specs/tasks.md
-context:
-  - docs/tasks/main/concepts/planning-pipeline-scope.md
-  - docs/tasks/main/specs/plan.md
-max_iterations: 10
-validate: true
----
-
-# Planning Pipeline Build
-
-Generated by `spectre-build --plan` on 2026-02-09.
-
-## Context
-- Scope: planning-pipeline-scope.md
-- Plan: plan.md
-- Tasks: tasks.md
-
-## Command
-\```bash
-spectre-build docs/tasks/main/build.md
-\```
-```
-
-## Critical Files for Implementation
+### Critical Files
 
 | File | Reason |
 |------|--------|
-| `build-loop/src/build_loop/cli.py` | Add `--plan` flag, `run_plan_pipeline()`, extend session save/load/resume |
-| `build-loop/src/build_loop/pipeline/loader.py` | Add `create_plan_pipeline()` and `create_plan_resume_pipeline()` factories |
-| `build-loop/src/build_loop/hooks.py` | Add `plan_before_stage()` and `plan_after_stage()` hooks |
-| `build-loop/src/build_loop/prompts/planning/` | 7 new prompt templates (research, assess, create_plan, create_tasks, plan_review, req_validate, update_docs) |
-| `build-loop/src/build_loop/stats.py` | Add `plan_loops` counter for dashboard |
-| `build-loop/src/build_loop/pipeline/stage.py` | Reference for how `allowed_tools`/`denied_tools` are passed to agent runner |
-| `build-loop/src/build_loop/agent.py` | Reference for how tool filtering works in agent runners |
+| `build-loop/src/build_loop/cli.py` | Add flag, formatting function, and all interception points |
+| `build-loop/src/build_loop/pipeline/executor.py` | `PipelineConfig` dataclass (read-only reference) |
+| `build-loop/src/build_loop/pipeline/stage.py` | `StageConfig` dataclass (read-only reference) |
+| `build-loop/tests/` | New test file for dry-run |

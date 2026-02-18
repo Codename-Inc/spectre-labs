@@ -149,6 +149,42 @@ def notify_build_complete(
     return notify(message=message, title=title, subtitle=subtitle)
 
 
+def notify_plan_complete(
+    stages_completed: int,
+    total_time: str,
+    success: bool = True,
+    project: str | None = None,
+) -> bool:
+    """
+    Send a planning pipeline completion notification.
+
+    Args:
+        stages_completed: Number of planning stages completed
+        total_time: Human-readable duration string
+        success: Whether planning succeeded
+        project: Project name/path to show in subtitle
+
+    Returns:
+        True if notification was sent successfully
+    """
+    branch = get_git_branch()
+    if project and branch:
+        subtitle = f"[{project}] {branch}"
+    elif project:
+        subtitle = f"[{project}]"
+    elif branch:
+        subtitle = branch
+    else:
+        subtitle = None
+
+    if success:
+        message = f"Planning complete! {stages_completed} stages in {total_time}"
+    else:
+        message = f"Planning failed after {stages_completed} stages ({total_time})"
+
+    return notify(message=message, title="👻 | SPECTRE", subtitle=subtitle)
+
+
 def notify_build_error(error: str) -> bool:
     """
     Send a build error notification.

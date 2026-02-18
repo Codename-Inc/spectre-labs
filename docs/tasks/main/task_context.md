@@ -1,101 +1,51 @@
-# Task Context: Planning Pipeline
+# Task Context
 
-## Technical Research
+## Summary
+Add a `--dry-run` flag to `spectre-build` that prints the pipeline stages and their transitions without executing any agent invocations. The feature touches three areas: CLI argument parsing (adding the flag), pipeline config construction (already exists for all modes), and a new display function that walks the pipeline config and prints stage names, transitions, and end signals. The codebase has a clean separation between config construction and execution, making this straightforward.
 
-### Architecture Patterns
+## Architecture Patterns
+- **CLI routing in `main()`**: Flags are parsed via `argparse` in `parse_args()`, then `main()` dispatches based on mode (`--plan`, `--pipeline`, `--validate`, manifest, etc.). Each mode constructs a `PipelineConfig` before passing it to a `PipelineExecutor` — dry-run intercepts after config construction, before execution.
+- **Pipeline config as data**: `PipelineConfig` (dataclass) holds all stage definitions, transitions, start stage, and end signals. `StageConfig` holds per-stage details (name, prompt template path, completion strategy, max iterations, transitions). All the information needed for dry-run display is already in the config object.
+- **Factory functions for pipeline configs**: `create_default_pipeline()`, `create_plan_pipeline()`, `create_plan_resume_pipeline()` in `loader.py` produce `PipelineConfig` instances programmatically. `load_pipeline()` parses YAML files into the same type. Dry-run can use any of these.
+- **Legacy mode has no pipeline config**: `run_build_validate_cycle()` (no `--validate`, no `--pipeline`) runs a simple loop — no `PipelineConfig` exists. Dry-run must handle this case (either print a message or construct a minimal description).
 
-The build loop uses a stage-based pipeline architecture where:
-- `PipelineExecutor` runs stages in a loop, following signal-based transitions
-- Stages iterate internally (up to `max_iterations`) until a completion strategy detects a signal
-- Context dict is the artifact bus — initialized with prompt variables, mutated by hooks, enriched with stage artifacts
-- `before_stage` / `after_stage` hooks inject computed data between stages (e.g., git diffs)
-- Completion strategies: `PromiseCompletion` (regex `[[PROMISE:SIGNAL]]`), `JsonCompletion` (parses ```json blocks), `CompositeCompletion` (fallback chain)
-- Factory functions (e.g., `create_default_pipeline()`) construct `PipelineConfig` programmatically
-- Session JSON at `.spectre/build-session.json` persists routing state for resume
+## Key Files
+| File | Relevance |
+|------|-----------|
+| `build-loop/src/build_loop/cli.py:128-249` | `parse_args()` — add `--dry-run` flag here |
+| `build-loop/src/build_loop/cli.py:990-1143` | `main()` — routing logic where dry-run check goes (after config construction, before execution) |
+| `build-loop/src/build_loop/cli.py:560-650` | `run_default_pipeline()` — creates config for `--validate` mode |
+| `build-loop/src/build_loop/cli.py:653-796` | `run_plan_pipeline()` — creates config for `--plan` mode |
+| `build-loop/src/build_loop/cli.py:494-557` | `run_pipeline()` — loads config for `--pipeline` mode |
+| `build-loop/src/build_loop/cli.py:901-966` | `run_manifest()` — loads manifest, delegates to pipeline or legacy |
+| `build-loop/src/build_loop/pipeline/executor.py:50-65` | `PipelineConfig` dataclass — the data structure to display |
+| `build-loop/src/build_loop/pipeline/stage.py:22-40` | `StageConfig` dataclass — per-stage details |
+| `build-loop/src/build_loop/pipeline/loader.py:231-315` | `create_default_pipeline()` — factory for build/review/validate |
+| `build-loop/src/build_loop/pipeline/loader.py:413-520` | `create_plan_pipeline()` — factory for planning stages |
+| `build-loop/src/build_loop/pipeline/loader.py:170-205` | `load_pipeline()` — YAML pipeline loading |
 
-### Key Integration Points
+## Dependencies
+- `argparse` — CLI parsing (stdlib, already imported in `cli.py`)
+- `PipelineConfig` / `StageConfig` — dataclasses from `pipeline/executor.py` and `pipeline/stage.py`
+- Pipeline factory functions from `pipeline/loader.py`
+- `manifest.py:load_manifest()` — for manifest-driven dry-run
 
-| Component | Role | File |
-|-----------|------|------|
-| `cli.py` | CLI routing, session save/load, `run_default_pipeline()` | `build-loop/src/build_loop/cli.py` |
-| `loader.py` | Pipeline factory functions, YAML loading | `build-loop/src/build_loop/pipeline/loader.py` |
-| `executor.py` | Stage orchestration, transitions, hooks | `build-loop/src/build_loop/pipeline/executor.py` |
-| `stage.py` | Stage iteration loop, prompt building, completion eval | `build-loop/src/build_loop/pipeline/stage.py` |
-| `completion.py` | Promise/JSON/Composite completion strategies | `build-loop/src/build_loop/pipeline/completion.py` |
-| `hooks.py` | Inter-stage context injection (git scope) | `build-loop/src/build_loop/hooks.py` |
-| `stats.py` | BuildStats dataclass, loop counters, dashboard | `build-loop/src/build_loop/stats.py` |
-| `agent.py` | Agent runners (Claude/Codex), tool filtering | `build-loop/src/build_loop/agent.py` |
-| `prompt.py` | Template loading + variable substitution | `build-loop/src/build_loop/prompt.py` |
+## Integration Points
+- **`parse_args()` at `cli.py:128`**: Add `--dry-run` argument to the parser
+- **`main()` at `cli.py:990`**: After determining mode (plan/pipeline/validate/legacy) and constructing the pipeline config, check `args.dry_run` and call a display function instead of executing
+- **`run_manifest()` at `cli.py:901`**: Manifest mode also needs dry-run support — after loading manifest and determining validate mode, display config instead of running
+- **New display function**: A function like `print_pipeline_dry_run(config: PipelineConfig)` that walks `config.stages`, prints name/transitions/completion for each, and shows the overall flow graph. Could live in `cli.py` or a new utility.
 
-### Existing Prompts to Adapt
+## Existing Conventions
+- **Code style**: Standard Python, type hints, docstrings on all public functions. `from __future__ import annotations` not used.
+- **Error handling**: `sys.exit(1)` for fatal errors, `print(..., file=sys.stderr)` for error messages
+- **CLI output**: Uses emoji prefixes for visual hierarchy, `=`x60 separator lines, indented details
+- **Testing**: pytest with `unittest.mock`. Test classes grouped by feature. Tests use `patch("sys.argv", [...])` for CLI testing.
+- **Build/tooling**: `pyproject.toml` with setuptools, installed via `pipx install -e .` from `build-loop/`
 
-The main Spectre repo has interactive planning prompts at `/Users/joe/Dev/spectre/plugins/spectre/commands/`:
-- `plan.md` — Meta-router: researches codebase, assesses complexity (LIGHT/STANDARD/COMPREHENSIVE), routes to plan+tasks or tasks-only
-- `create_plan.md` — Full plan generation: codebase research → clarifications → implementation plan
-- `create_tasks.md` — Task breakdown: requirements extraction → hierarchical tasks → dependency analysis → execution strategies
-- `plan_review.md` — Simplification review: finds over-engineering, removes unnecessary abstractions
-
-These need adaptation for autonomous mode:
-- Strip `AskUserQuestion` calls
-- Remove "Reply 'Approved'" waits
-- Replace interactive flow with file-based context reading
-- Add JSON completion blocks for signal detection
-
-### Implementation Approach
-
-**New pipeline factory**: `create_plan_pipeline()` in `loader.py` — constructs 6-stage pipeline:
-
-```
-research → assess ─── LIGHT ──────────→ create_tasks → plan_review → req_validate
-                  ├── STANDARD ───────→ create_plan → create_tasks → plan_review → req_validate
-                  └── COMPREHENSIVE ──→ create_plan → create_tasks → plan_review → req_validate
-```
-
-**New CLI flag**: `--plan` in `cli.py`, routing to `run_plan_pipeline()`
-
-**New prompts**: 6 templates in `build-loop/src/build_loop/prompts/planning/`:
-- `research.md` — Codebase research, pattern analysis
-- `assess.md` — Complexity scoring, architecture design (if COMPREHENSIVE)
-- `create_plan.md` — Implementation plan generation (adapted from `/spectre:create_plan`)
-- `create_tasks.md` — Task breakdown (adapted from `/spectre:create_tasks`)
-- `plan_review.md` — Simplification pass (adapted from `/spectre:plan_review`)
-- `req_validate.md` — Requirements cross-reference, clarifications or manifest output
-
-**Session extension**: Add `plan: bool` and `plan_output_dir: str` to session JSON
-
-**Completion strategy**: All stages use `JsonCompletion` with stage-specific signals
-
-### Dependencies
-
-- No new Python dependencies needed
-- Reuses existing pipeline executor, stage, and completion machinery
-- Prompt templates are self-contained markdown files
-
-### Similar Features
-
-The existing `create_default_pipeline()` factory is the direct pattern to follow. The planning pipeline is structurally identical — different stages, same executor.
-
-### Impact Summary
-
-| Area | Impact |
-|------|--------|
-| `cli.py` | Add `--plan` flag, `run_plan_pipeline()`, update session save/load/resume |
-| `loader.py` | Add `create_plan_pipeline()` factory |
-| `hooks.py` | Add planning-specific hooks (inject depth, output dir into context) |
-| `prompts/planning/` | 6 new prompt templates (adapted from Spectre interactive prompts) |
-| `stats.py` | Add `plan_loops` counter or reuse existing counters per stage name |
-| `executor.py` | No changes |
-| `stage.py` | No changes |
-| `completion.py` | No changes |
-
-## Scope Reference
-
-Full scope document: `docs/tasks/main/concepts/planning-pipeline-scope.md`
-
-## Decisions
-
-- **Complexity-aware routing**: Assess stage emits LIGHT/STANDARD/COMPREHENSIVE signal; transitions skip create_plan for LIGHT
-- **Single-pass plan review**: One simplification pass, then req_validate catches real gaps
-- **File-mediated communication**: Each stage reads/writes files, no in-memory state beyond context dict
-- **Pause/resume for clarifications**: Session persistence, user runs `spectre-build resume`
-- **Manifest output**: Final artifact is a `.md` with YAML frontmatter for `spectre-build build.md`
+## Constraints and Risks
+- **Legacy mode (no pipeline config)**: When neither `--validate`, `--pipeline`, nor `--plan` is set, the CLI uses `run_build_validate_cycle()` which has no `PipelineConfig`. Dry-run must either: (a) print a simple "build loop (no pipeline)" message, or (b) construct a minimal config for display purposes.
+- **Manifest mode routing**: `run_manifest()` calls `sys.exit()` directly, so dry-run must be intercepted before it enters that function, or the function must accept a dry-run parameter.
+- **Resume mode**: `run_resume()` also calls `sys.exit()`. Dry-run for resume needs access to the saved session to determine what pipeline would run.
+- **`--dry-run` + `--plan` interaction**: Plan pipeline constructs output directories (`docs/tasks/{branch}/`, `specs/`, `clarifications/`) before creating the config. Dry-run should skip directory creation or it creates side effects. The directory creation happens inside `run_plan_pipeline()` at line 706-708.
+- **Scope is small**: Only 3 requirements — add flag, print stages/transitions, no agent invocations. No changes to the pipeline executor, stages, or completion strategies needed.
