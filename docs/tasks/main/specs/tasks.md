@@ -88,15 +88,15 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
   - [ ] `notify_ship_complete()` is called after `run_ship_pipeline()` returns
 
 #### [1.2] Implement `run_ship_pipeline()` Function
-- [ ] **1.2.1** Create `run_ship_pipeline()` function in `cli.py` with signature `(context_files, max_iterations, agent, resume_context) -> tuple[int, int]`, modeled on `run_plan_pipeline()`. Implements: parent branch detection (via `git merge-base` / `git log` heuristics, fail fast on failure), working set scope computation (`{parent_branch}..HEAD`), context dict assembly (keys: `parent_branch`, `working_set_scope`, `context_files`, `clean_summary`, `test_summary`), pipeline wiring (`create_ship_pipeline()`, `PipelineExecutor` with ship hooks and `create_ship_event_handler()`), and execution
+- [x] **1.2.1** Create `run_ship_pipeline()` function in `cli.py` with signature `(context_files, max_iterations, agent, resume_context) -> tuple[int, int]`, modeled on `run_plan_pipeline()`. Implements: parent branch detection (via `git merge-base` / `git log` heuristics, fail fast on failure), working set scope computation (`{parent_branch}..HEAD`), context dict assembly (keys: `parent_branch`, `working_set_scope`, `context_files`, `clean_summary`, `test_summary`), pipeline wiring (`create_ship_pipeline()`, `PipelineExecutor` with ship hooks and `create_ship_event_handler()`), and execution
   - **Produces**: `run_ship_pipeline()` callable returning `(exit_code, total_iterations)`
   - **Consumed by**: `main()` routing (1.1.2), `run_resume()` (4.1), `run_manifest()` (4.2)
   - **Replaces**: N/A (new function)
-  - [ ] Parent branch detected and stored in context before pipeline creation; clear error on failure
-  - [ ] Working set scope computed as commit range from parent branch
-  - [ ] Context dict includes all required keys with correct initial values
-  - [ ] `PipelineExecutor` wired with `ship_before_stage`, `ship_after_stage`, and `create_ship_event_handler`
-  - [ ] Returns `tuple[int, int]` (exit_code, total_iterations)
+  - [x] Parent branch detected and stored in context before pipeline creation; clear error on failure
+  - [x] Working set scope computed as commit range from parent branch
+  - [x] Context dict includes all required keys with correct initial values
+  - [x] `PipelineExecutor` wired with `ship_before_stage`, `ship_after_stage`, and `create_ship_event_handler`
+  - [x] Returns `tuple[int, int]` (exit_code, total_iterations)
 
 #### [1.3] Add Ship to Interactive Mode
 - [ ] **1.3.1** Add `"ship"` option to `prompt_for_mode()` in `cli.py`. When selected, prompt for optional context files, confirm detected parent branch, and call `run_ship_pipeline()`

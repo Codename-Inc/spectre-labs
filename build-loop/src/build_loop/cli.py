@@ -858,7 +858,8 @@ def run_ship_pipeline(
 ) -> tuple[int, int]:
     """Run the ship pipeline: clean → test → rebase.
 
-    Stub — full implementation in task 1.2.
+    Detects the parent branch, computes working set scope, creates the
+    3-stage ship pipeline, and runs it with ship hooks and stats tracking.
 
     Args:
         context_files: Optional context document paths
@@ -869,7 +870,99 @@ def run_ship_pipeline(
     Returns:
         Tuple of (exit_code, total_iterations_completed)
     """
-    raise NotImplementedError("run_ship_pipeline not yet implemented (task 1.2)")
+    import logging
+    import subprocess as _subprocess
+
+    from .agent import get_agent
+    from .hooks import ship_after_stage, ship_before_stage
+    from .pipeline.executor import PipelineExecutor, PipelineStatus
+    from .pipeline.loader import create_ship_pipeline
+    from .stats import BuildStats, create_ship_event_handler
+
+    logger = logging.getLogger(__name__)
+
+    # Get agent runner
+    runner = get_agent(agent)
+    if not runner.check_available():
+        print(f"❌ ERROR: {runner.name} CLI not found", file=sys.stderr)
+        return 127, 0
+
+    # Use resume context if provided (skip branch detection)
+    if resume_context:
+        context = resume_context
+    else:
+        # Detect parent branch — fail fast on failure
+        parent_branch = _detect_parent_branch()
+        if not parent_branch:
+            print("❌ ERROR: Could not detect parent branch.", file=sys.stderr)
+            print("  Ensure you are on a feature branch (not detached HEAD).", file=sys.stderr)
+            return 1, 0
+
+        # Compute working set scope
+        working_set_scope = f"{parent_branch}..HEAD"
+
+        # Build context for prompt substitution
+        if context_files:
+            context_str = "\n".join(f"- `{f}`" for f in context_files)
+        else:
+            context_str = "None"
+
+        context = {
+            "parent_branch": parent_branch,
+            "working_set_scope": working_set_scope,
+            "context_files": context_str,
+            "clean_summary": "",
+            "test_summary": "",
+        }
+
+    # Create pipeline config
+    config = create_ship_pipeline()
+
+    # Stats with event-based loop counting
+    stats = BuildStats()
+    on_event = create_ship_event_handler(stats)
+
+    # Create and run executor with ship hooks
+    executor = PipelineExecutor(
+        config=config,
+        runner=runner,
+        on_event=on_event,
+        context=context,
+        before_stage=ship_before_stage,
+        after_stage=ship_after_stage,
+    )
+
+    state = executor.run(stats)
+
+    # Return based on pipeline status
+    if state.status == PipelineStatus.COMPLETED:
+        return 0, state.total_iterations
+    elif state.status == PipelineStatus.STOPPED:
+        return 130, state.total_iterations
+    else:
+        return 1, state.total_iterations
+
+
+def _detect_parent_branch() -> str | None:
+    """Detect the parent branch of the current feature branch.
+
+    Uses git merge-base with common base branches (main, master, develop).
+    Returns the branch name, or None if detection fails.
+    """
+    import subprocess as _subprocess
+
+    # Try common parent branch names
+    for candidate in ("main", "master", "develop"):
+        try:
+            _subprocess.check_output(
+                ["git", "merge-base", candidate, "HEAD"],
+                text=True, stderr=_subprocess.DEVNULL,
+            )
+            return candidate
+        except (FileNotFoundError, _subprocess.CalledProcessError):
+            continue
+
+    return None
 
 
 def run_resume(args: argparse.Namespace) -> None:
