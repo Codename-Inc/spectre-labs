@@ -95,3 +95,19 @@
 - Planning-only guardrails explicit in both task instructions and Rules section: "Do NOT write tests or implement anything"
 - Agent count output format included as example to ensure structured output the test_execute stage can consume
 **Blockers/Risks**: None
+
+## Iteration — [3.2] Create `test_execute.md` Prompt Template with Subagent Dispatch
+**Status**: Complete
+**What Was Done**: Created `test_execute.md` prompt template extracting Task 3 (write tests & verify) from monolithic `test.md`, enhanced with parallel subagent dispatch instructions modeled after original `/spectre:test` Step 3. Task 1 reviews the batching plan from test_plan, partitions into agent batches by risk tier (P0: 1 file/agent, P1: 2-3 files/agent, P2: 3-5 files/agent), dispatches up to 8 parallel test writer subagents via Task tool in a single message, then consolidates results. Task 2 reviews consolidated results and fills remaining gaps. Includes full risk-weighted testing framework and embedded subagent prompt template with behavioral testing instructions. Created 24 TDD tests covering content, signals, variables, subagent dispatch instructions, batching heuristics, and negative assertions.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/shipping/test_execute.md` — new, 2-task execution prompt with subagent dispatch
+- `build-loop/tests/test_test_execute_prompt.py` — new, 24 tests for prompt content
+- `docs/tasks/subagent-unblock/specs/tasks.md` — marked 3.2 sub-tasks complete
+**Key Decisions**:
+- Two-task structure: Task 1 dispatches parallel subagents, Task 2 reviews and fills gaps (mirrors clean_investigate pattern)
+- Embedded subagent prompt template includes risk tier, file list, test plan items, and full quality requirements
+- Conditional subagent dispatch: fewer than 3 test plan items → sequential writing without subagents
+- Max 8 parallel subagents (up from 4 in clean_investigate — test writing batches are more independent)
+- No commit instructions — test_commit stage handles that
+- No full-suite verification — test_verify stage handles that
+**Blockers/Risks**: None
