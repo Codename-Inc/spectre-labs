@@ -60,7 +60,7 @@ class TestRunPlanPipeline:
             mock_status.STOPPED = "stopped"
             mock_state.status = mock_status.COMPLETED
 
-            exit_code, iterations = run_plan_pipeline(
+            exit_code, iterations, manifest = run_plan_pipeline(
                 context_files=["scope.md"],
                 max_iterations=10,
                 agent="claude",
@@ -109,7 +109,7 @@ class TestRunPlanPipeline:
             mock_status.STOPPED = "stopped"
             mock_state.status = mock_status.COMPLETED
 
-            exit_code, iterations = run_plan_pipeline(
+            exit_code, iterations, manifest = run_plan_pipeline(
                 context_files=["scope.md"],
                 max_iterations=10,
                 agent="claude",
@@ -132,7 +132,7 @@ class TestRunPlanPipeline:
         mock_runner.name = "claude"
 
         with patch("build_loop.agent.get_agent", return_value=mock_runner):
-            exit_code, iterations = run_plan_pipeline(
+            exit_code, iterations, manifest = run_plan_pipeline(
                 context_files=["scope.md"],
                 max_iterations=10,
                 agent="claude",
@@ -147,7 +147,7 @@ class TestMainPlanRouting:
     def test_main_routes_plan_to_run_plan_pipeline(self):
         """Happy: main() with --plan routes to run_plan_pipeline."""
         with patch("sys.argv", ["spectre-build", "--plan", "--context", "scope.md"]), \
-             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 5)) as mock_run, \
+             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 5, "/tmp/build.md")) as mock_run, \
              patch("build_loop.cli.notify_build_complete"), \
              patch("build_loop.cli.save_session"):
 

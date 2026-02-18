@@ -47,7 +47,7 @@ class TestRunResumePlanRouting:
         args.no_notify = True
 
         with patch("build_loop.cli.load_session", return_value=session), \
-             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 3)) as mock_run, \
+             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 3, "")) as mock_run, \
              patch("build_loop.cli.save_session"), \
              patch("build_loop.cli.notify_build_complete"):
 
@@ -132,7 +132,7 @@ class TestRunResumePlanContextPassthrough:
         args.no_notify = True
 
         with patch("build_loop.cli.load_session", return_value=session), \
-             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1)) as mock_run, \
+             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1, "")) as mock_run, \
              patch("build_loop.cli.save_session"), \
              patch("build_loop.cli.notify_build_complete"):
 
@@ -155,7 +155,7 @@ class TestRunResumePlanContextPassthrough:
         args.no_notify = True
 
         with patch("build_loop.cli.load_session", return_value=session), \
-             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1)) as mock_run, \
+             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1, "")) as mock_run, \
              patch("build_loop.cli.save_session"), \
              patch("build_loop.cli.notify_build_complete"):
 
@@ -201,7 +201,7 @@ class TestRunResumePlanValidationSkip:
         args.no_notify = True
 
         with patch("build_loop.cli.load_session", return_value=session), \
-             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1)), \
+             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1, "")), \
              patch("build_loop.cli.save_session"), \
              patch("build_loop.cli.validate_inputs") as mock_validate, \
              patch("build_loop.cli.notify_build_complete"):
@@ -222,7 +222,7 @@ class TestRunResumePlanValidationSkip:
         args.no_notify = True
 
         with patch("build_loop.cli.load_session", return_value=session), \
-             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1)), \
+             patch("build_loop.cli.run_plan_pipeline", return_value=(0, 1, "")), \
              patch("build_loop.cli.save_session") as mock_save, \
              patch("build_loop.cli.notify_build_complete"):
 
