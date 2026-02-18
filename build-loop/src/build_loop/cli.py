@@ -8,6 +8,7 @@ the core build loop logic.
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,6 +28,27 @@ def get_session_path() -> Path:
     return Path.cwd() / SESSION_FILE
 
 
+def derive_scope_slug(context_files: list[str]) -> str:
+    """Derive a scope slug from the first context file name.
+
+    Strips 'scope_' prefix, file extension, lowercases, and replaces
+    non-alphanumeric characters with underscores.
+
+    Examples:
+        scope_sidebar_restructure.md → sidebar_restructure
+        design_notes.md → design_notes
+        My Feature Spec.md → my_feature_spec
+    """
+    if not context_files:
+        return "default"
+    stem = Path(context_files[0]).stem  # e.g. "scope_sidebar_restructure"
+    slug = stem.removeprefix("scope_")
+    slug = slug.lower()
+    slug = re.sub(r"[^a-z0-9]+", "_", slug)
+    slug = slug.strip("_")
+    return slug or "default"
+
+
 def save_session(
     tasks_file: str,
     context_files: list[str],
@@ -39,6 +61,7 @@ def save_session(
     plan_output_dir: str | None = None,
     plan_context: dict | None = None,
     plan_clarifications_path: str | None = None,
+    plan_scope_name: str | None = None,
     ship: bool = False,
     ship_context: dict | None = None,
 ) -> None:
@@ -62,6 +85,7 @@ def save_session(
         "plan_output_dir": plan_output_dir,
         "plan_context": plan_context,
         "plan_clarifications_path": plan_clarifications_path,
+        "plan_scope_name": plan_scope_name,
         "ship": ship,
         "ship_context": ship_context,
         "started_at": datetime.now(timezone.utc).isoformat(),
@@ -101,6 +125,8 @@ def format_session_summary(session: dict) -> str:
             lines.append(f"  Parent:     {ship_ctx['parent_branch']}")
     elif session.get("plan"):
         lines.append("  Mode:       Planning")
+        if session.get("plan_scope_name"):
+            lines.append(f"  Scope:      {session['plan_scope_name']}")
     else:
         lines.append(f"  Tasks:      {session['tasks_file']}")
 
@@ -227,6 +253,13 @@ Examples:
         "--plan",
         action="store_true",
         help="Run planning pipeline: scope docs → build-ready manifest",
+    )
+
+    parser.add_argument(
+        "--scope-name",
+        dest="scope_name",
+        help="Name for this planning scope (default: derived from context file). "
+             "Creates isolated output directory: docs/tasks/{branch}/{scope_name}/",
     )
 
     parser.add_argument(
@@ -378,6 +411,26 @@ def prompt_for_plan_context() -> list[str]:
 
     paths = [p.strip() for p in response.split(",")]
     return [p for p in paths if p]
+
+
+def prompt_for_scope_name(context_files: list[str]) -> str:
+    """Interactively prompt for a scope name, defaulting to derived slug.
+
+    The scope name determines the isolated output directory for this
+    planning cycle: docs/tasks/{branch}/{scope_name}/
+    """
+    default = derive_scope_slug(context_files)
+    print(f"Scope name [{default}]: ", end="")
+    response = input().strip()
+
+    if not response:
+        return default
+
+    # Sanitize user input the same way as derive_scope_slug
+    slug = response.lower()
+    slug = re.sub(r"[^a-z0-9]+", "_", slug)
+    slug = slug.strip("_")
+    return slug or default
 
 
 def validate_inputs(
@@ -703,6 +756,7 @@ def run_plan_pipeline(
     max_iterations: int,
     agent: str = "claude",
     output_dir: str | None = None,
+    scope_name: str | None = None,
     resume_stage: str | None = None,
     resume_context: dict | None = None,
 ) -> tuple[int, int, str]:
@@ -718,7 +772,8 @@ def run_plan_pipeline(
         context_files: List of scope document paths
         max_iterations: Maximum iterations per stage
         agent: Agent backend to use
-        output_dir: Output directory for artifacts (default: docs/tasks/{branch})
+        output_dir: Output directory for artifacts (default: docs/tasks/{branch}/{scope_name})
+        scope_name: Scope slug for directory isolation (default: derived from context files)
         resume_stage: If set, use resume pipeline starting at this stage
         resume_context: Preserved context dict from a prior session
 
@@ -740,7 +795,7 @@ def run_plan_pipeline(
         print(f"❌ ERROR: {runner.name} CLI not found", file=sys.stderr)
         return 127, 0, ""
 
-    # Determine output directory
+    # Determine output directory: docs/tasks/{branch}/{scope_name}/
     if not output_dir:
         try:
             branch = _subprocess.check_output(
@@ -749,12 +804,21 @@ def run_plan_pipeline(
             ).strip()
         except (FileNotFoundError, _subprocess.CalledProcessError):
             branch = "main"
-        output_dir = str(Path.cwd() / "docs" / "tasks" / branch)
+        slug = scope_name or derive_scope_slug(context_files)
+        output_dir = str(Path.cwd() / "docs" / "tasks" / branch / slug)
 
     # Ensure output directories exist
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     (Path(output_dir) / "specs").mkdir(parents=True, exist_ok=True)
     (Path(output_dir) / "clarifications").mkdir(parents=True, exist_ok=True)
+
+    # Freshness guard: warn if plan.md already exists on a fresh (non-resume) run
+    if not resume_stage:
+        plan_file = Path(output_dir) / "specs" / "plan.md"
+        if plan_file.exists():
+            print(f"⚠️  Existing plan found: {plan_file}", file=sys.stderr)
+            print("   This will be overwritten by the new planning cycle.", file=sys.stderr)
+            print("   Use --scope-name to create a separate directory.\n", file=sys.stderr)
 
     # Create pipeline config
     if resume_stage:
@@ -829,6 +893,7 @@ def run_plan_pipeline(
             plan_output_dir=output_dir,
             plan_context=context,
             plan_clarifications_path=clarif_path,
+            plan_scope_name=scope_name or derive_scope_slug(context_files),
         )
 
         return 0, state.total_iterations, ""
@@ -1028,6 +1093,7 @@ def run_resume(args: argparse.Namespace) -> None:
             plan_output_dir=session.get("plan_output_dir"),
             plan_context=session.get("plan_context"),
             plan_clarifications_path=session.get("plan_clarifications_path"),
+            plan_scope_name=session.get("plan_scope_name"),
         )
 
         exit_code, iterations_completed, _manifest = run_plan_pipeline(
@@ -1035,6 +1101,7 @@ def run_resume(args: argparse.Namespace) -> None:
             max_iterations=max_iterations,
             agent=agent,
             output_dir=session.get("plan_output_dir"),
+            scope_name=session.get("plan_scope_name"),
             resume_stage="update_docs",
             resume_context=session.get("plan_context"),
         )
@@ -1268,17 +1335,20 @@ def main() -> None:
 
         context_files = [normalize_path(f) for f in args.context]
         context_files = [str(Path(f).resolve()) for f in context_files]
+        scope_name = args.scope_name or derive_scope_slug(context_files)
         max_iterations = args.max_iterations
         agent = args.agent
         project_name = Path.cwd().name
         start_time = time.time()
 
-        save_session("", context_files, max_iterations, agent=agent, plan=True)
+        save_session("", context_files, max_iterations, agent=agent,
+                     plan=True, plan_scope_name=scope_name)
 
         exit_code, iterations_completed, manifest_path = run_plan_pipeline(
             context_files=context_files,
             max_iterations=max_iterations,
             agent=agent,
+            scope_name=scope_name,
         )
 
         duration = time.time() - start_time
@@ -1338,17 +1408,20 @@ def main() -> None:
                 print("Error: Plan mode requires at least one context/scope file.", file=sys.stderr)
                 sys.exit(1)
             context_files = [str(Path(normalize_path(f)).resolve()) for f in context_files]
+            scope_name = prompt_for_scope_name(context_files)
             max_iterations = prompt_for_max_iterations()
             agent = prompt_for_agent()
             project_name = Path.cwd().name
             start_time = time.time()
 
-            save_session("", context_files, max_iterations, agent=agent, plan=True)
+            save_session("", context_files, max_iterations, agent=agent,
+                         plan=True, plan_scope_name=scope_name)
 
             exit_code, iterations_completed, manifest_path = run_plan_pipeline(
                 context_files=context_files,
                 max_iterations=max_iterations,
                 agent=agent,
+                scope_name=scope_name,
             )
 
             duration = time.time() - start_time

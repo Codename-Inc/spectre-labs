@@ -113,6 +113,15 @@ Output this JSON block at the very end of your response:
 - Preserve existing document structure when making updates
 - Every clarification answer must be addressed — do not skip any
 
+**Scope mismatch guard:** After reading the plan and tasks, verify they describe the SAME feature/scope as the scope documents. If the plan and tasks are for a completely different feature (e.g., they describe completed work for a prior scope, or their title/summary doesn't match the scope documents), STOP immediately. Do NOT append phases, modify, or otherwise alter documents that belong to a different planning cycle. Instead, emit:
+
+```json
+{
+  "status": "PLAN_READY",
+  "error": "Scope mismatch: plan.md describes '<plan title>' but scope documents describe '<scope title>'. These documents belong to a different planning cycle."
+}
+```
+
 **Do NOT:**
 - Write code or make any code changes — that's the build stage's job
 - Re-run research or explore the codebase — that was the research stage's job
@@ -121,3 +130,4 @@ Output this JSON block at the very end of your response:
 - Emit any status other than `PLAN_READY` — the resume stage always produces a manifest
 - Skip reading the plan and tasks before editing — you need to understand what exists
 - Create new clarification questions — the resume stage resolves gaps, it does not create new ones
+- Append new phases to documents that belong to a different scope — this corrupts prior planning artifacts
