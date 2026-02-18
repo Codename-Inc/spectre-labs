@@ -28,4 +28,8 @@ __all__ = [
 def main() -> None:
     """Main entry point for Spectre Build CLI."""
     from .cli import main as cli_main
-    cli_main()
+    try:
+        cli_main()
+    except KeyboardInterrupt:
+        print()
+        raise SystemExit(130)
