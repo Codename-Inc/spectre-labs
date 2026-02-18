@@ -135,17 +135,17 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Uses `{working_set_scope}`, `{context_files}` template variables
 
 #### [3.2] Create `test_execute.md` Prompt Template with Subagent Dispatch
-- [ ] **3.2.1** Create `build-loop/src/build_loop/prompts/shipping/test_execute.md` with parallel @spectre:tester subagent dispatch modeled after original `/spectre:test` Step 3 (`/Users/joe/Dev/spectre/plugins/spectre/commands/test.md` lines 275-305)
+- [x] **3.2.1** Create `build-loop/src/build_loop/prompts/shipping/test_execute.md` with parallel @spectre:tester subagent dispatch modeled after original `/spectre:test` Step 3 (`/Users/joe/Dev/spectre/plugins/spectre/commands/test.md` lines 275-305)
   - **Produces**: Prompt template for test execution sub-stage with parallel Task tool subagent dispatch
   - **Consumed by**: `create_ship_pipeline()` stage config, `Stage.build_prompt()`
   - **Replaces**: Task 3 section of monolithic `test.md`
-  - [ ] Includes explicit subagent dispatch instructions: partition test plan by risk tier, dispatch one @spectre:tester per batch in SINGLE message with multiple Task tool calls
-  - [ ] Batching: P0 1 agent/file, P1 2-3 files/agent, P2 3-5 files/agent; aim for 3-5 agents medium scope, up to 8 large scope
-  - [ ] Each subagent receives: file list, risk tier, test quality framework, project test conventions
-  - [ ] Wait for all agents, consolidate results
-  - [ ] Includes the full risk-weighted testing framework from current `test.md`
-  - [ ] Completion signals: `TEST_EXECUTE_TASK_COMPLETE` (loop) and `TEST_EXECUTE_COMPLETE` (transition to test_verify)
-  - [ ] Uses `{working_set_scope}`, `{context_files}` template variables
+  - [x] Includes explicit subagent dispatch instructions: partition test plan by risk tier, dispatch one @spectre:tester per batch in SINGLE message with multiple Task tool calls
+  - [x] Batching: P0 1 agent/file, P1 2-3 files/agent, P2 3-5 files/agent; aim for 3-5 agents medium scope, up to 8 large scope
+  - [x] Each subagent receives: file list, risk tier, test quality framework, project test conventions
+  - [x] Wait for all agents, consolidate results
+  - [x] Includes the full risk-weighted testing framework from current `test.md`
+  - [x] Completion signals: `TEST_EXECUTE_TASK_COMPLETE` (loop) and `TEST_EXECUTE_COMPLETE` (transition to test_verify)
+  - [x] Uses `{working_set_scope}`, `{context_files}` template variables
 
 #### [3.3] Create `test_verify.md` Prompt Template
 - [ ] **3.3.1** Create `build-loop/src/build_loop/prompts/shipping/test_verify.md` for post-execution verification
