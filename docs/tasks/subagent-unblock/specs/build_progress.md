@@ -67,3 +67,17 @@
 - Max 4 parallel subagents per dispatch to keep context manageable
 - Second-wave validation is optional (only for 3+ high-risk items)
 **Blockers/Risks**: None
+
+## Iteration — [2.3] Create `clean_execute.md` Prompt Template
+**Status**: Complete
+**What Was Done**: Created `clean_execute.md` prompt template extracting Tasks 6-7 (execute approved changes, lint compliance) from monolithic `clean.md` into a focused execution sub-stage with `CLEAN_EXECUTE_TASK_COMPLETE`/`CLEAN_EXECUTE_COMPLETE` signals. Unlike discover/investigate, this stage explicitly allows file modifications. Both tasks include commit instructions. Created 19 TDD tests covering content, signals, variables, commit instructions, execution permissions, and negative assertions.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/shipping/clean_execute.md` — new, 2-task execution prompt
+- `build-loop/tests/test_clean_execute_prompt.py` — new, 19 tests for prompt content
+- `docs/tasks/subagent-unblock/specs/tasks.md` — marked 2.3 sub-tasks complete
+**Key Decisions**:
+- No subagent dispatch — execution is sequential (test-after-each-change requires ordering)
+- Task 1 includes revert-on-failure guardrail: if tests fail after a change, revert that specific change
+- Both tasks include explicit commit instructions to avoid uncommitted work between tasks
+- Rules section scopes work to working set but does NOT include analysis-only restrictions (this stage modifies files)
+**Blockers/Risks**: None
