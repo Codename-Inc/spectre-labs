@@ -1,16 +1,18 @@
-# Validation Gaps — Phase 4: CLI Integration
-*Generated: 2026-02-17*
+# Validation Gaps — Ship Loop (`--ship`)
+*Generated: 2026-02-18*
 
 ## Summary
 - **Overall Status**: Complete
-- **Requirements**: 8 of 8 delivered
+- **Requirements**: 30 of 30 delivered
 - **Gaps Found**: 0 requiring remediation
+
+All 30 requirements across 4 phases (12 parent tasks, 14 sub-tasks) have been validated as Delivered — Defined AND Connected AND Reachable from user action.
 
 ---
 
 ## Gap Remediation Tasks
 
-No gaps found. All Phase 4 tasks are fully delivered, connected, and reachable.
+No gaps found. All tasks are fully delivered, connected, and reachable.
 
 ---
 
@@ -18,110 +20,101 @@ No gaps found. All Phase 4 tasks are fully delivered, connected, and reachable.
 
 | Area | Task | Status | Definition | Usage |
 |------|------|--------|------------|-------|
-| [4.1] `--plan` flag | 4.1.1 Add `--plan` argument | ✅ | cli.py:217-221 | cli.py:1023 |
-| [4.1] run_plan_pipeline() | 4.1.2 Implement function | ✅ | cli.py:653-796 | cli.py:1037, cli.py:849 |
-| [4.1] main() routing | 4.1.3 Wire `--plan` in main() | ✅ | cli.py:1022-1054 | Entry point → main() |
-| [4.2] Session save/load | 4.2.1 Planning session fields | ✅ | cli.py:30-67 | cli.py:769, cli.py:1035, cli.py:838 |
-| [4.2] Session display | 4.2.2 format_session_summary() | ✅ | cli.py:87-125 | cli.py:814 |
-| [4.3] Resume flow | 4.3.1 Planning resume routing | ✅ | cli.py:836-856 | cli.py:1005-1007 |
-
-### Dependency Verification
-
-| Import | Definition | Usage Site |
-|--------|------------|------------|
-| `create_plan_pipeline` | loader.py:413 | cli.py:685, cli.py:714 |
-| `create_plan_resume_pipeline` | loader.py:523 | cli.py:685, cli.py:712 |
-| `plan_before_stage` | hooks.py:118 | cli.py:683, cli.py:745 |
-| `plan_after_stage` | hooks.py:147 | cli.py:683, cli.py:746 |
-| `create_plan_event_handler` | stats.py:220 | cli.py:686, cli.py:737 |
+| CLI Flag & Routing | 1.1 | ✅ | cli.py:238-242 | cli.py:1294 (main), cli.py:1324 (interactive guard) |
+| Ship Pipeline Orchestration | 1.2 | ✅ | cli.py:859-949 | cli.py:1304 (main), cli.py:1043 (resume), cli.py:1148 (manifest) |
+| Interactive Mode | 1.3 | ✅ | cli.py:356-368, cli.py:1365-1408 | cli.py:1325 (mode dispatch) |
+| Pipeline Factory | 2.1 | ✅ | loader.py:413-475 | cli.py:925 (run_ship_pipeline) |
+| Ship Hooks | 2.2 | ✅ | hooks.py:186-251 | cli.py:937-938 (PipelineExecutor wiring) |
+| Clean Prompt | 3.1 | ✅ | prompts/shipping/clean.md (7 tasks) | loader.py:430 (stage config) |
+| Test Prompt | 3.2 | ✅ | prompts/shipping/test.md (4 tasks) | loader.py:444 (stage config) |
+| Rebase Prompt | 3.3 | ✅ | prompts/shipping/rebase.md (single window) | loader.py:458 (stage config) |
+| Session Persistence | 4.1 | ✅ | cli.py:42-43, cli.py:1032-1048, cli.py:97-101 | cli.py:1302 (save), cli.py:1032 (resume) |
+| Manifest Support | 4.2 | ✅ | manifest.py:21, cli.py:1143-1165 | cli.py:1143 (routing check) |
+| Stats Tracking | 4.3 | ✅ | stats.py:65, stats.py:245-262, stats.py:209-211 | cli.py:929 (handler), cli.py:935 (wiring) |
+| Notification | 4.4 | ✅ | notify.py:188-221 | cli.py:1314, cli.py:1084, cli.py:1158 |
+| No Core Engine Changes | REQ-030 | ✅ | N/A | executor.py, stage.py, completion.py, stream.py, agent.py untouched |
 
 ---
 
 ## Reachability Traces
 
-### Trace 1: `spectre-build --plan --context scope.md`
+### Trace 1: `spectre-build --ship`
 ```
-User action: spectre-build --plan --context scope.md
-→ main() [cli.py:990]
-→ parse_args() → args.plan=True [cli.py:994]
-→ args.plan check [cli.py:1023]
-→ validate --context present [cli.py:1024-1026]
-→ save_session(..., plan=True) [cli.py:1035]
-→ run_plan_pipeline(context_files, max_iterations, agent) [cli.py:1037-1041]
-→ create_plan_pipeline() [cli.py:714]
-→ PipelineExecutor(..., before_stage=plan_before_stage, after_stage=plan_after_stage) [cli.py:740-747]
-→ executor.run(stats) [cli.py:749]
-→ notification on completion [cli.py:1046-1053]
-```
-
-### Trace 2: `spectre-build resume` (planning session)
-```
-User action: spectre-build resume
-→ main() [cli.py:990]
-→ positional == "resume" [cli.py:1005]
-→ run_resume(args) [cli.py:1006]
-→ load_session() [cli.py:803]
-→ format_session_summary(session) shows Mode/Output/Clarif [cli.py:813-815]
-→ session.get("plan") == True [cli.py:836]
-→ save_session(...) timestamp update [cli.py:838-847]
-→ run_plan_pipeline(..., resume_stage="update_docs", resume_context=...) [cli.py:849-856]
-→ create_plan_resume_pipeline() [cli.py:712]
-→ PipelineExecutor with hooks [cli.py:740-747]
-→ executor.run(stats) [cli.py:749]
-→ notification on completion [cli.py:889-897]
+User: spectre-build --ship
+→ main() [cli.py:1222]
+→ parse_args() → args.ship=True [cli.py:1226]
+→ args.ship check [cli.py:1294]
+→ context_files resolved (optional) [cli.py:1295-1296]
+→ save_session(..., ship=True) [cli.py:1302]
+→ run_ship_pipeline(context_files, max_iterations, agent) [cli.py:1304-1308]
+  → _detect_parent_branch() [cli.py:901] → fail fast if None [cli.py:902-905]
+  → working_set_scope = f"{parent_branch}..HEAD" [cli.py:908]
+  → create_ship_pipeline() [cli.py:925] → PipelineConfig(name="ship", stages={clean,test,rebase})
+  → create_ship_event_handler(stats) [cli.py:929]
+  → PipelineExecutor(config, runner, on_event, context, ship_before_stage, ship_after_stage) [cli.py:932-939]
+  → executor.run(stats) [cli.py:941]
+    → Stage "clean" → 7 tasks via clean.md → CLEAN_TASK_COMPLETE/CLEAN_COMPLETE
+    → ship_after_stage("clean") → context["clean_summary"] set
+    → Stage "test" → 4 tasks via test.md → TEST_TASK_COMPLETE/TEST_COMPLETE
+    → ship_after_stage("test") → context["test_summary"] set
+    → Stage "rebase" → rebase.md → SHIP_COMPLETE → pipeline ends
+→ notify_ship_complete() [cli.py:1314-1319]
+→ sys.exit(exit_code) [cli.py:1321]
 ```
 
-### Trace 3: CLARIFICATIONS_NEEDED signal flow
+### Trace 2: `spectre-build` (interactive ship)
 ```
-Pipeline running → req_validate stage emits CLARIFICATIONS_NEEDED
-→ plan_after_stage("req_validate", context, result) [hooks.py:172-177]
-→ stores clarifications_path in context [hooks.py:176]
-→ Pipeline ends (no transition for CLARIFICATIONS_NEEDED)
-→ run_plan_pipeline() detects last_signal == "CLARIFICATIONS_NEEDED" [cli.py:756]
-→ Prints instructions to user [cli.py:762-766]
-→ save_session(..., plan_clarifications_path=clarif_path) [cli.py:769-778]
-→ Returns exit code 0 [cli.py:780]
+User: spectre-build (no flags)
+→ main() → prompt_for_mode() [cli.py:1325]
+→ User selects "ship" → mode == "ship" [cli.py:1365]
+→ prompt_for_context_files() (optional) [cli.py:1366]
+→ _detect_parent_branch() [cli.py:1373] → fail fast if None
+→ Display parent branch, confirm [cli.py:1380-1385]
+→ save_session(..., ship=True) [cli.py:1389]
+→ run_ship_pipeline() [cli.py:1391-1395]
+→ notify_ship_complete() [cli.py:1400-1406]
+→ sys.exit(exit_code) [cli.py:1408]
+```
+
+### Trace 3: `spectre-build resume` (ship session)
+```
+User: spectre-build resume
+→ run_resume(args) [cli.py:974]
+→ load_session() → session.get("ship") == True [cli.py:1032]
+→ save_session(..., ship=True, ship_context=...) [cli.py:1034-1041]
+→ run_ship_pipeline(resume_context=session.get("ship_context")) [cli.py:1043-1048]
+  → resume_context path → skips _detect_parent_branch() [cli.py:897-898]
+→ notify_ship_complete() [cli.py:1084-1089]
+→ sys.exit(exit_code) [cli.py:1105]
+```
+
+### Trace 4: `spectre-build ship.md` (manifest)
+```
+User: spectre-build ship.md
+→ main() → positional.endswith(".md") → run_manifest() [cli.py:1242-1244]
+→ load_manifest("ship.md") → manifest.ship=True [manifest.py:171]
+→ manifest.ship check [cli.py:1143] → before validate check [cli.py:1175]
+→ save_session(..., ship=True, manifest_path=...) [cli.py:1145-1146]
+→ run_ship_pipeline() [cli.py:1148-1152]
+→ notify_ship_complete() [cli.py:1158-1163]
+→ sys.exit(exit_code) [cli.py:1165]
 ```
 
 ## Scope Creep
-None detected. All changes are scoped to Phase 4 CLI integration requirements.
 
-## Detailed Requirement Verification
+None detected. All changes are scoped to ship loop requirements. The only file outside the core ship implementation that was modified is `pipeline/__init__.py` (added `create_ship_pipeline` to the package's public exports), which is the expected pattern.
 
-### [4.1.1] --plan argument
-- ✅ Added as `store_true` action (cli.py:218-221)
-- ✅ Help text: "Run planning pipeline: scope docs → build-ready manifest"
-- ✅ `--plan` makes `--tasks` optional — plan check at line 1023 precedes tasks check at line 1057
+## Files Changed (12 implementation files + tests)
 
-### [4.1.2] run_plan_pipeline() function
-- ✅ Returns `tuple[int, int]` (exit_code, total_iterations) — cli.py:660
-- ✅ Creates output directory `docs/tasks/{branch}` — cli.py:695-708
-- ✅ Builds initial context dict — cli.py:722-733
-- ✅ Routes to `create_plan_pipeline()` or `create_plan_resume_pipeline()` based on `resume_stage` — cli.py:711-714
-- ✅ Wires `plan_before_stage`/`plan_after_stage` hooks — cli.py:745-746
-- ✅ Wires `create_plan_event_handler(stats)` as on_event — cli.py:737
-- ✅ Handles CLARIFICATIONS_NEEDED: saves session, prints message, returns exit 0 — cli.py:752-780
-- ✅ On PLAN_VALIDATED/PLAN_READY: prints manifest path and spectre-build command — cli.py:783-789
-
-### [4.1.3] --plan routing in main()
-- ✅ `--plan` takes priority (checked before tasks/validate) — cli.py:1023
-- ✅ `--plan` without `--context` errors — cli.py:1024-1026
-- ✅ Notification on completion/error — cli.py:1046-1053
-
-### [4.2.1] Session persistence
-- ✅ `save_session()` accepts `plan`, `plan_output_dir`, `plan_context`, `plan_clarifications_path` — cli.py:38-41
-- ✅ Session JSON includes all planning fields when plan=True — cli.py:59-62
-- ✅ `load_session()` returns full dict (no changes needed) — cli.py:70-84
-
-### [4.2.2] format_session_summary()
-- ✅ Shows "Mode: Planning" when plan=True — cli.py:93-94
-- ✅ Shows output dir — cli.py:116-117
-- ✅ Shows clarifications path — cli.py:119-120
-
-### [4.3.1] Planning resume flow
-- ✅ Detects plan=True in session — cli.py:836
-- ✅ Routes to run_plan_pipeline() with resume_stage="update_docs" — cli.py:849-856
-- ✅ Passes preserved plan_context — cli.py:855
-- ✅ Passes plan_output_dir — cli.py:853
-- ✅ Updates session timestamp before resume — cli.py:838-847
-- ✅ Notification on completion — cli.py:889-897
+| File | Changes |
+|------|---------|
+| `cli.py` | `--ship` flag, `run_ship_pipeline()`, `_detect_parent_branch()`, ship routing in `main()`, `run_resume()`, `run_manifest()`, ship in `prompt_for_mode()`, ship fields in `save_session()`, ship display in `format_session_summary()` |
+| `pipeline/loader.py` | `create_ship_pipeline()` factory with 3 stages |
+| `pipeline/__init__.py` | Export `create_ship_pipeline` |
+| `hooks.py` | `ship_before_stage()`, `ship_after_stage()`, `_collect_stage_summary()` |
+| `stats.py` | `ship_loops` field, `create_ship_event_handler()`, `print_summary()` ship display |
+| `notify.py` | `notify_ship_complete()` |
+| `manifest.py` | `ship: bool = False` field in `BuildManifest`, parsed from frontmatter |
+| `prompts/shipping/clean.md` | 7-task clean stage prompt |
+| `prompts/shipping/test.md` | 4-task test stage prompt |
+| `prompts/shipping/rebase.md` | Single-context-window rebase prompt with PR/merge landing |

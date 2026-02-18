@@ -189,3 +189,175 @@
 - `validate_inputs()` skipped entirely for planning sessions since there's no tasks file to validate
 - Session save includes all planning fields for consistency (even though the pipeline may overwrite on CLARIFICATIONS_NEEDED)
 **Blockers/Risks**: None
+
+## Iteration — [4.3] Stats Tracking
+**Status**: Complete
+**What Was Done**: Added `ship_loops: int = 0` field to `BuildStats` dataclass, `create_ship_event_handler()` factory function that increments `ship_loops` on `StageCompletedEvent`, and `SHIP LOOPS` conditional display line in `print_summary()` dashboard. All three sub-tasks follow the exact pattern established by `plan_loops` / `create_plan_event_handler()`. Added 6 unit tests covering field defaults, isolation from other counters, dashboard display/omission, and event handler behavior (happy + failure paths).
+**Files Changed**:
+- `build-loop/src/build_loop/stats.py` (added `ship_loops` field, `SHIP LOOPS` dashboard line, `create_ship_event_handler()` factory)
+- `build-loop/tests/test_ship_stats.py` (new, 6 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 4.3.1, 4.3.2, 4.3.3 complete)
+**Key Decisions**:
+- Followed exact pattern of `create_plan_event_handler()` — factory returns callback that increments on any `StageCompletedEvent` (not filtered by stage name)
+- `SHIP LOOPS` line placed after `PLAN LOOPS` in dashboard for visual consistency
+- Handler increments on all stage completions since all stages in the ship pipeline are ship stages
+**Blockers/Risks**: None
+
+## Iteration — [4.4] Notification
+**Status**: Complete
+**What Was Done**: Added `notify_ship_complete()` function to `notify.py` following the exact pattern of `notify_plan_complete()`. Function accepts `stages_completed`, `total_time`, `success`, and optional `project` parameters. Sends "Ship complete! {stages} stages in {time}" on success and "Ship failed after {stages} stages ({time})" on failure, with branch detection for subtitle formatting and audio notification. Added 6 unit tests covering success/failure messaging, branch+project subtitle combinations, branch-only, project-only, and no-subtitle scenarios.
+**Files Changed**:
+- `build-loop/src/build_loop/notify.py` (added `notify_ship_complete()` function)
+- `build-loop/tests/test_ship_notify.py` (new, 6 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 4.4.1 complete)
+**Key Decisions**:
+- Identical signature pattern to `notify_plan_complete()` (`stages_completed`, `total_time`, `success`, `project`) for consistency
+- Wiring at call sites (main, resume, manifest) deferred to tasks 1.1.2, 4.1.2, and 4.2.2 per task design
+**Blockers/Risks**: None
+
+## Iteration — [4.1] Session Persistence and Resume
+**Status**: Complete
+**What Was Done**: Added `ship: bool = False` and `ship_context: dict | None = None` parameters to `save_session()` with defaults for backward compatibility. Added `elif session.get("ship"):` block in `run_resume()` after the plan block, routing to `run_ship_pipeline()` with resume context and calling `notify_ship_complete()` for notifications. Updated `format_session_summary()` to show "Mode: Ship" and parent branch from `ship_context`. Added `notify_ship_complete` import to cli.py. All 8 new tests pass (happy + failure for save/load, resume routing, notification, and format display). Existing planning session tests unaffected.
+**Files Changed**:
+- `build-loop/src/build_loop/cli.py` (extended `save_session()` with ship fields, added ship branch in `run_resume()`, updated notification logic, updated `format_session_summary()`, added `notify_ship_complete` import)
+- `build-loop/tests/test_session_ship.py` (new, 8 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 4.1.1, 4.1.2, 4.1.3 complete)
+**Key Decisions**:
+- Ship check placed before plan check in `format_session_summary()` and notification logic to prevent ambiguity if both flags are somehow set
+- `ship_context` uses `or {}` fallback when extracting `parent_branch` for safe display even with None context
+- Pre-existing `test_plan_resume.py` failures (mocking 2-tuple instead of 3-tuple for `run_plan_pipeline`) noted but not in scope — not caused by this change
+**Blockers/Risks**: None
+
+## Iteration — [4.2] Manifest Support
+**Status**: Complete
+**What Was Done**: Added `ship: bool = False` field to `BuildManifest` dataclass and updated `load_manifest()` to parse `ship` from YAML frontmatter (same pattern as `validate`). Added `manifest.ship` routing in `run_manifest()` before the `validate` check — when `manifest.ship` is True, routes to `run_ship_pipeline()` with manifest context files and settings, calls `notify_ship_complete()`, and exits. Also added a `run_ship_pipeline()` stub function in `cli.py` (raises `NotImplementedError`) so that the resume path (task 4.1) and manifest path can reference it before the full implementation in task 1.2. Added 7 unit tests covering BuildManifest field defaults, load_manifest parsing, and run_manifest routing priority.
+**Files Changed**:
+- `build-loop/src/build_loop/manifest.py` (added `ship` field to `BuildManifest`, updated `load_manifest()` to parse `ship`)
+- `build-loop/src/build_loop/cli.py` (added `run_ship_pipeline()` stub, added ship routing block in `run_manifest()`)
+- `build-loop/tests/test_manifest_ship.py` (new, 7 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 4.2.1, 4.2.2 complete)
+**Key Decisions**:
+- `run_ship_pipeline()` is a stub (`NotImplementedError`) — full implementation deferred to task 1.2 per the execution strategy
+- Ship routing in `run_manifest()` skips `validate_inputs()` since ship doesn't require a tasks file (same pattern as plan)
+- Ship check placed before validate check so `ship: true` takes priority when both flags are set in frontmatter
+- Ship routing saves session with `ship=True` for resume support
+**Blockers/Risks**: None
+
+## Iteration — [2.1] Create Ship Pipeline Factory
+**Status**: Complete
+**What Was Done**: Added `create_ship_pipeline()` factory function in `loader.py` returning a 3-stage `PipelineConfig` (clean → test → rebase) with `JsonCompletion` strategies, correct signal transitions (`CLEAN_TASK_COMPLETE`/`CLEAN_COMPLETE`, `TEST_TASK_COMPLETE`/`TEST_COMPLETE`, `SHIP_COMPLETE`), and `PLAN_DENIED_TOOLS` for all stages. Created 3 placeholder prompt templates in `prompts/shipping/` (clean.md, test.md, rebase.md). Updated `__init__.py` exports and `pyproject.toml` package-data. Added 17 unit tests covering structure, transitions, signals, iterations, tool filtering, and prompt paths.
+**Files Changed**:
+- `build-loop/src/build_loop/pipeline/loader.py` (added `create_ship_pipeline()` factory)
+- `build-loop/src/build_loop/pipeline/__init__.py` (added `create_ship_pipeline` export)
+- `build-loop/src/build_loop/prompts/shipping/clean.md` (new placeholder)
+- `build-loop/src/build_loop/prompts/shipping/test.md` (new placeholder)
+- `build-loop/src/build_loop/prompts/shipping/rebase.md` (new placeholder)
+- `build-loop/pyproject.toml` (added `prompts/shipping/*.md` to package-data)
+- `build-loop/tests/test_ship_pipeline.py` (new, 17 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.1 complete)
+**Key Decisions**:
+- Followed exact pattern of `create_plan_pipeline()` — factory in `loader.py`, `JsonCompletion` on all stages, `PLAN_DENIED_TOOLS` reused
+- Clean/test stages use dual completion statuses (task-level + stage-level) matching the iterative pattern from build stage
+- Rebase stage capped at 3 iterations (single context window) while clean/test get 10 each
+- Placeholder prompts include the correct context variable references (`{parent_branch}`, `{working_set_scope}`, `{clean_summary}`, `{test_summary}`, `{context_files}`) so downstream tasks can fill them in
+**Blockers/Risks**: None
+
+## Iteration — [2.2] Implement Ship Hooks
+**Status**: Complete
+**What Was Done**: Added `ship_before_stage()` and `ship_after_stage()` hook functions to `hooks.py`, plus a `_collect_stage_summary()` helper. The before hook snapshots HEAD for clean and test stages (reuses `snapshot_head()` from `git_scope.py`). The after hook collects git diff via `collect_diff()` and stores formatted summaries as `clean_summary` (after clean) and `test_summary` (after test). Both hooks are no-ops for the rebase stage. A shared `_collect_stage_summary()` helper formats changed files and commit messages into a readable string, with fallbacks for missing start commits or failed diff collection. Added 11 unit tests covering all happy/failure paths.
+**Files Changed**:
+- `build-loop/src/build_loop/hooks.py` (added `ship_before_stage`, `ship_after_stage`, `_collect_stage_summary`, updated module docstring)
+- `build-loop/tests/test_ship_hooks.py` (new, 11 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 2.2.1, 2.2.2 complete)
+**Key Decisions**:
+- Ship hooks are separate functions from build/plan hooks (same pattern as `plan_before_stage`/`plan_after_stage`) so each pipeline wires its own hooks independently
+- Shared `_collect_stage_summary()` helper eliminates duplication between clean and test after-hooks
+- Reuses `_phase_start_commit` context key (same as build hooks) since ship and build pipelines never run simultaneously
+- Fallback messages for missing commits and failed diffs ensure context always has a string value
+**Blockers/Risks**: None
+
+## Iteration — [3.1] Create Clean Stage Prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `clean.md` prompt with a comprehensive 7-task autonomous clean stage template. The prompt decomposes the clean workflow into: (1) determine working set scope, (2) analyze dead code, (3) analyze duplication, (4) dispatch investigation subagents, (5) validate high-risk findings, (6) execute approved changes with verification, (7) lint compliance. Each task emits `CLEAN_TASK_COMPLETE` JSON, final task emits `CLEAN_COMPLETE`. Template uses `{parent_branch}`, `{working_set_scope}`, and `{context_files}` context variables. Added 13 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/shipping/clean.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_clean_prompt.py` (new, 13 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 3.1 complete)
+**Key Decisions**:
+- Conservative approach: Tasks 2-5 are analysis-only (catalog findings, investigate, validate) before any modifications in Task 6
+- CONFIRMED vs SUSPECT classification system prevents premature removal of code that may have external callers
+- Task 6 includes per-file verification (lint + test after each modification) with automatic revert on failure
+- "Do NOT" guardrails prevent scope creep outside the working set and premature modifications
+**Blockers/Risks**: None
+
+## Iteration — [3.2] Create Test Stage Prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `test.md` prompt with a comprehensive 4-task autonomous test stage template. The prompt decomposes the test workflow into: (1) discover working set and plan (categorize files, identify test gaps), (2) risk assessment and test plan (P0-P3 priority tiers with specific criteria per tier), (3) write tests and verify (implement in priority order, run lint + tests per batch), (4) commit. Each task emits `TEST_TASK_COMPLETE` JSON, final task emits `TEST_COMPLETE`. Template uses `{working_set_scope}` and `{context_files}` context variables. Added 15 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/shipping/test.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_test_prompt.py` (new, 15 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 3.2 complete)
+**Key Decisions**:
+- Risk-tiered approach (P0-P3) with concrete criteria per tier: P0=core business logic/security, P1=public APIs/integration, P2=internal helpers, P3=simple getters/formatting
+- P0 and P1 mandatory, P2/P3 best-effort within iteration limits
+- Task 3 includes both happy and failure path testing per test opportunity
+- "Do NOT" guardrails prevent modifying production code (clean stage's job) and writing tests outside working set
+**Blockers/Risks**: None
+
+## Iteration — [3.3] Create Rebase Stage Prompt
+**Status**: Complete
+**What Was Done**: Replaced the placeholder `rebase.md` prompt with a comprehensive single-context-window rebase stage template. The prompt guides the agent through 6 steps: (1) confirm target branch, (2) prepare (commit uncommitted work, fetch, create safety backup ref), (3) execute rebase with conflict resolution sub-step, (4) verify (lint + tests), (5) land via PR (`gh pr create` with template detection) or local merge (with stash approval flow via `read -p`), (6) clean up safety ref. Template uses `{parent_branch}`, `{clean_summary}`, `{test_summary}`, and `{context_files}` context variables. Emits `SHIP_COMPLETE` JSON. Added 18 unit tests covering template content, variable substitution, and structural requirements.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/shipping/rebase.md` (replaced placeholder with full prompt)
+- `build-loop/tests/test_rebase_prompt.py` (new, 18 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 3.3 complete)
+**Key Decisions**:
+- Single context window design (not decomposed into tasks) because rebase needs continuous state for conflict resolution
+- PR creation checks `gh auth status` before attempting, falls back to local merge if not authenticated
+- Local merge uses `read -p` via Bash for stash approval (works because Bash is an allowed tool, unlike AskUserQuestion)
+- Safety backup ref (`safety-backup-pre-rebase`) created before rebase and deleted only after successful landing
+- Template includes `{context_files}` variable in addition to the three required variables for consistency with clean/test prompts
+- "Do NOT" guardrails prevent force-pushing, skipping verification, and modifying production code during rebase
+**Blockers/Risks**: None
+
+## Iteration — [1.2] Implement `run_ship_pipeline()` Function
+**Status**: Complete
+**What Was Done**: Replaced the `NotImplementedError` stub with a full `run_ship_pipeline()` implementation in `cli.py`. The function detects the parent branch via `_detect_parent_branch()` (tries main/master/develop using `git merge-base`), computes working set scope as `{parent_branch}..HEAD`, assembles the context dict with all required keys (`parent_branch`, `working_set_scope`, `context_files`, `clean_summary`, `test_summary`), creates the ship pipeline via `create_ship_pipeline()`, wires `PipelineExecutor` with `ship_before_stage`/`ship_after_stage` hooks and `create_ship_event_handler` for stats, and returns `(exit_code, total_iterations)`. Resume context is used directly when provided (skips branch detection). Added 5 unit tests covering happy path, parent branch detection failure, resume context usage, agent not available, and pipeline stopped.
+**Files Changed**:
+- `build-loop/src/build_loop/cli.py` (replaced stub with full `run_ship_pipeline()`, added `_detect_parent_branch()` helper)
+- `build-loop/tests/test_run_ship_pipeline.py` (new, 5 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 1.2.1 and all sub-tasks complete)
+**Key Decisions**:
+- `_detect_parent_branch()` extracted as private helper (same pattern as `_set_review_fixes_path`) — tries main/master/develop in order via `git merge-base`
+- Resume context skips branch detection entirely (branch was already detected in the original session)
+- Follows exact pattern of `run_plan_pipeline()` — same import structure, agent check, stats wiring, executor creation, return mapping
+- Pre-existing `test_plan_cli.py` failures (2-tuple unpacking for 3-tuple `run_plan_pipeline`) confirmed not caused by this change
+**Blockers/Risks**: None
+
+## Iteration — [1.1] Add `--ship` Flag and Main Routing
+**Status**: Complete
+**What Was Done**: Added `--ship` as a `store_true` argument in `parse_args()` (placed after `--build`, near `--plan` and `--validate`) and added `--ship` routing block in `main()` after the `--plan` block but before interactive mode selection. The routing block resolves optional context files, saves session with `ship=True`, calls `run_ship_pipeline()`, calls `notify_ship_complete()`, and exits. Also updated the interactive mode guard to include `args.ship` so `--ship` skips the interactive menu. Added 7 unit tests covering flag parsing (happy + default), main routing (happy path, notification, context files, no context, session save).
+**Files Changed**:
+- `build-loop/src/build_loop/cli.py` (added `--ship` flag to `parse_args()`, added `--ship` routing block in `main()`, updated interactive mode guard)
+- `build-loop/tests/test_ship_cli.py` (new, 7 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 1.1.1, 1.1.2 complete)
+**Key Decisions**:
+- `--ship` routing placed after `--plan` but before interactive mode selection, following the plan pattern exactly
+- Context files are optional for `--ship` (no error without them) unlike `--plan` which requires `--context`
+- Session saved with `ship=True` before pipeline runs, enabling resume support
+- Interactive mode guard updated: `not args.ship` added to prevent `--ship` from falling through to interactive prompt
+**Blockers/Risks**: None
+
+## Iteration — [1.3] Add Ship to Interactive Mode
+**Status**: Complete
+**What Was Done**: Added `"ship"` as a selectable option in `prompt_for_mode()` (updated prompt text and validation set) and implemented the full interactive ship flow in `main()`. When user selects "ship" in interactive mode: prompts for optional context files, prompts for max iterations and agent, detects parent branch via `_detect_parent_branch()`, displays branch for user confirmation (Y/n), saves session with `ship=True`, calls `run_ship_pipeline()`, sends notification via `notify_ship_complete()`, and exits. Branch detection failure exits with error code 1. User declining branch confirmation cancels gracefully with exit 0. Added 9 unit tests covering prompt_for_mode ship option (accepts "ship", shows "ship" in prompt text, defaults to "build" on invalid) and interactive flow (happy path, no context, branch confirmation, branch decline, session save, branch detection failure).
+**Files Changed**:
+- `build-loop/src/build_loop/cli.py` (updated `prompt_for_mode()` to accept "ship", added `elif mode == "ship":` block in `main()`)
+- `build-loop/tests/test_interactive_ship.py` (new, 9 tests)
+- `docs/tasks/main/specs/tasks.md` (marked 1.3.1 and sub-tasks complete)
+**Key Decisions**:
+- Interactive ship flow prompts for branch confirmation (Y/n) before proceeding — safety measure since rebase is destructive
+- Context files are optional (same as `--ship` flag mode) — ship works from branch state
+- Follows exact pattern of interactive plan flow: prompt for inputs → detect state → confirm → save session → run pipeline → notify → exit
+- Branch detection failure exits immediately with error (same as `run_ship_pipeline()` behavior)
+**Blockers/Risks**: None
