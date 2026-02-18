@@ -1,3 +1,9 @@
+<!-- DEPRECATED: This monolithic prompt has been split into three focused sub-stage prompts:
+  - clean_discover.md  (Tasks 1-3: scope + dead code + duplication analysis)
+  - clean_investigate.md (Tasks 4-5: investigation dispatch + validation)
+  - clean_execute.md   (Tasks 6-7: apply changes + lint compliance)
+Kept for backward compatibility with custom YAML pipelines referencing "clean". -->
+
 # Ship — Clean Stage
 
 You are running the **clean** stage of the ship pipeline. Your job is to clean up the working set — remove dead code, eliminate duplication, and ensure lint compliance — so the branch is ready for testing and landing.

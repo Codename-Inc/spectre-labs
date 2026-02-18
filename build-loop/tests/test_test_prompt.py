@@ -99,6 +99,36 @@ class TestTestPromptContent:
         assert "Do NOT" in template or "Do not" in template or "DO NOT" in template
 
 
+class TestTestPromptDeprecation:
+    """Tests for test.md deprecation header."""
+
+    def _load_template(self) -> str:
+        return (PROMPTS_DIR / "test.md").read_text(encoding="utf-8")
+
+    def test_deprecation_header_present(self):
+        """Happy: test.md starts with a deprecation notice."""
+        template = self._load_template()
+        first_line = template.strip().splitlines()[0]
+        assert "deprecated" in first_line.lower() or "deprecat" in first_line.lower(), (
+            "test.md should start with a deprecation header"
+        )
+
+    def test_deprecation_references_replacement_files(self):
+        """Happy: Deprecation header mentions all four replacement files."""
+        template = self._load_template()
+        assert "test_plan.md" in template
+        assert "test_execute.md" in template
+        assert "test_verify.md" in template
+        assert "test_commit.md" in template
+
+    def test_deprecation_does_not_remove_original_content(self):
+        """Failure: Deprecation is additive — original content must remain intact."""
+        template = self._load_template()
+        assert "Ship — Test Stage" in template
+        assert "TEST_TASK_COMPLETE" in template
+        assert "TEST_COMPLETE" in template
+
+
 class TestTestPromptSubstitution:
     """Tests for test prompt variable substitution via Stage."""
 

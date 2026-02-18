@@ -1,3 +1,10 @@
+<!-- DEPRECATED: This monolithic prompt has been split into four focused sub-stage prompts:
+  - test_plan.md    (Tasks 1-2: discovery + risk assessment + batching strategy)
+  - test_execute.md (Task 3: parallel subagent dispatch for test writing)
+  - test_verify.md  (post-execution verification: run suite, diagnose, fix)
+  - test_commit.md  (Task 4: stage + commit + verify clean state)
+Kept for backward compatibility with custom YAML pipelines referencing "test". -->
+
 # Ship — Test Stage
 
 You are running the **test** stage of the ship pipeline. Your job is to ensure the working set has thorough, risk-appropriate test coverage so the branch can be landed with confidence.

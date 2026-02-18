@@ -231,16 +231,16 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
 ### Phase 6: Deprecate Old Prompts
 
 #### [6.1] Add Deprecation Headers to Old Prompt Files
-- [ ] **6.1.1** Add deprecation comment to top of `build-loop/src/build_loop/prompts/shipping/clean.md` noting it has been split into `clean_discover.md`, `clean_investigate.md`, `clean_execute.md`
+- [x] **6.1.1** Add deprecation comment to top of `build-loop/src/build_loop/prompts/shipping/clean.md` noting it has been split into `clean_discover.md`, `clean_investigate.md`, `clean_execute.md`
   - **Produces**: Backward compat for custom YAML pipelines referencing `clean.md`
   - **Consumed by**: N/A (informational)
   - **Replaces**: N/A
-  - [ ] Deprecation header present at top of file
-- [ ] **6.1.2** Add deprecation comment to top of `build-loop/src/build_loop/prompts/shipping/test.md` noting it has been split into `test_plan.md`, `test_execute.md`, `test_verify.md`, `test_commit.md`
+  - [x] Deprecation header present at top of file
+- [x] **6.1.2** Add deprecation comment to top of `build-loop/src/build_loop/prompts/shipping/test.md` noting it has been split into `test_plan.md`, `test_execute.md`, `test_verify.md`, `test_commit.md`
   - **Produces**: Backward compat for custom YAML pipelines referencing `test.md`
   - **Consumed by**: N/A (informational)
   - **Replaces**: N/A
-  - [ ] Deprecation header present at top of file
+  - [x] Deprecation header present at top of file
 
 ---
 
