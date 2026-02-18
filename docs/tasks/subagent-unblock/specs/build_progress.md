@@ -81,3 +81,17 @@
 - Both tasks include explicit commit instructions to avoid uncommitted work between tasks
 - Rules section scopes work to working set but does NOT include analysis-only restrictions (this stage modifies files)
 **Blockers/Risks**: None
+
+## Iteration — [3.1] Create `test_plan.md` Prompt Template with Batching Strategy
+**Status**: Complete
+**What Was Done**: Created `test_plan.md` prompt template extracting Tasks 1-2 (working set discovery, risk assessment) from monolithic `test.md`, enhanced with batching strategy for parallel test execution modeled after original `/spectre:test` Step 2. Task 1 discovers the working set via git diff and catalogs gaps. Task 2 classifies gaps into P0-P3 risk tiers and produces a batching plan (P0: 1 file/agent, P1: 2-3 files/agent, P2: 3-5 files/agent, P3: SKIP) targeting 3-5 agents for medium scope, up to 8 for large scope. Includes the full risk-weighted testing framework (tier definitions, test quality requirements, mutation testing mindset). Created 18 TDD tests covering content, signals, variables, batching heuristics, and negative assertions.
+**Files Changed**:
+- `build-loop/src/build_loop/prompts/shipping/test_plan.md` — new, 2-task planning prompt with batching strategy
+- `build-loop/tests/test_test_plan_prompt.py` — new, 18 tests for prompt content
+- `docs/tasks/subagent-unblock/specs/tasks.md` — marked 3.1 sub-tasks complete
+**Key Decisions**:
+- Full risk-weighted testing framework copied verbatim from `test.md` to keep each sub-stage self-contained (no cross-file references)
+- Batching heuristics placed in Task 2 alongside risk assessment (natural pairing: classify risk → group by risk tier → assign agents)
+- Planning-only guardrails explicit in both task instructions and Rules section: "Do NOT write tests or implement anything"
+- Agent count output format included as example to ensure structured output the test_execute stage can consume
+**Blockers/Risks**: None
