@@ -396,7 +396,6 @@ PLAN_DENIED_TOOLS = [
     "AskUserQuestion",
     "WebFetch",
     "WebSearch",
-    "Task",
     "EnterPlanMode",
     "NotebookEdit",
 ]
@@ -404,7 +403,6 @@ PLAN_DENIED_TOOLS = [
 # Research stage gets WebSearch/WebFetch access for external docs
 PLAN_RESEARCH_DENIED_TOOLS = [
     "AskUserQuestion",
-    "Task",
     "EnterPlanMode",
     "NotebookEdit",
 ]

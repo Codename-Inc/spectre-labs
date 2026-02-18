@@ -102,11 +102,17 @@ class TestResearchStageToolAccess:
             )
 
     def test_research_still_denies_interactive_tools(self):
-        """Failure-mode: Research stage still blocks AskUserQuestion, Task, etc."""
+        """Failure-mode: Research stage still blocks AskUserQuestion, EnterPlanMode, etc."""
         config = create_plan_pipeline()
         research = config.stages["research"]
         assert "AskUserQuestion" in research.denied_tools
-        assert "Task" in research.denied_tools
+        assert "EnterPlanMode" in research.denied_tools
+
+    def test_research_allows_task_tool(self):
+        """Happy: Research stage allows Task for subagent dispatch."""
+        config = create_plan_pipeline()
+        research = config.stages["research"]
+        assert "Task" not in research.denied_tools
 
 
 class TestPromptTemplatePaths:

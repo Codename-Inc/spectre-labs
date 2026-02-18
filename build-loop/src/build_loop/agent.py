@@ -67,14 +67,14 @@ CLAUDE_ALLOWED_TOOLS = [
     "TodoRead",
     "TodoWrite",
     "Skill",
+    "Task",
 ]
 
-# Tools explicitly denied — block the loop from hanging or spawning subagents
+# Tools explicitly denied — block the loop from hanging
 CLAUDE_DENIED_TOOLS = [
     "AskUserQuestion",
     "WebFetch",
     "WebSearch",
-    "Task",
     "EnterPlanMode",
     "NotebookEdit",
 ]
