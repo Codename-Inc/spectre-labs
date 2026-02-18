@@ -13,6 +13,75 @@ You will complete **one task per iteration**. After each task, STOP and output a
 
 ---
 
+## Risk-Weighted Testing Framework
+
+**100% line coverage is a vanity metric.** It treats a payment handler the same as a string formatter, tests implementation details that break on refactor, and burns tokens on code that can't break in production. Risk-weighted coverage focuses effort where bugs cause real user pain.
+
+### Risk Tier Definitions
+
+**P0 — Critical** (must test thoroughly):
+- Core business logic, data integrity, security boundaries, error handling for external inputs
+- Code that handles: user data mutations, financial transactions, PII, permissions, auth, sessions
+- **Coverage**: 100% behavioral coverage — every user-facing outcome has a test. All error paths tested. Edge cases for security-sensitive inputs (null, empty, malformed, overflow). Mutation-resistant assertions.
+
+**P1 — High** (test key behaviors):
+- Public API surfaces, integration points between modules, state management, core feature logic
+- **Coverage**: Happy path + critical error paths for all public functions. Contract tests at module boundaries. No need to test internal helpers.
+
+**P2 — Medium** (test public surface only):
+- Internal helpers with non-trivial logic, utility functions, formatters, validators, adapters
+- **Coverage**: Public exported functions — happy path only. Skip trivial functions (single-line returns, simple compositions). Only test if the function has logic worth verifying.
+
+**P3 — Low** (skip testing):
+- Type definitions, config files, styles, constants/enums (no logic), re-export barrels, simple pass-through wrappers, build scripts
+- **Coverage**: NO TESTS. Types and linting are the test. These files cannot break at runtime in ways tests would catch.
+
+### Test Quality Requirements
+
+Every test MUST:
+- **Test ONE behavior** — assert outcomes, not internal calls
+- **Be refactor-resilient** — test should pass if behavior unchanged, even if internals change
+- **Catch real bugs** — ask: "If I introduced a bug here, would this test fail?"
+- **Use descriptive names** — `when_[condition]_then_[outcome]` or `[action]_should_[result]`
+
+Every test MUST NOT:
+- Mock implementation details — don't mock internal functions, only external boundaries
+- Assert on call counts — unless testing side-effect prevention
+- Duplicate type coverage — don't test that types are correct
+- Test framework behavior — don't test that the framework routes/renders correctly
+
+### Mutation Testing Mindset
+
+For every test, ask: "If I changed the implementation to return a wrong value, would this test catch it?"
+
+```
+# GOOD — mutation-resistant: changing the discount logic would fail this
+test "applies 20% discount for premium users":
+    result = calculate_total(items=[100], user_tier="premium")
+    assert result == 80
+
+# BAD — NOT mutation-resistant: always passes regardless of implementation
+test "calls calculate_discount":
+    calculate_total(items=[100], user_tier="premium")
+    assert calculate_discount.was_called()
+```
+
+```
+# GOOD — tests behavior at the boundary
+test "rejects expired credentials":
+    result = authenticate(expired_token)
+    assert result.status == "DENIED"
+    assert result.reason == "TOKEN_EXPIRED"
+    assert session_store.create.was_not_called()  # side effect prevented
+
+# BAD — tests implementation wiring, not behavior
+test "calls validate_token":
+    authenticate(token)
+    assert validate_token.was_called_with(token)
+```
+
+---
+
 ## Tasks
 
 ### Task 1: Discover Working Set and Plan
@@ -41,19 +110,18 @@ Identify every file changed on this branch and build a test plan.
 
 ### Task 2: Risk Assessment and Test Plan
 
-Prioritize test gaps using a risk-tiered approach.
+Prioritize test gaps using the risk-weighted framework above. The goal is surgical coverage that maximizes confidence while minimizing token cost — not brute-force line coverage.
 
-1. Classify each test gap from Task 1 into a priority tier:
-   - **P0 — Critical**: Core business logic, data integrity, security boundaries, error handling for external inputs
-   - **P1 — High**: Public API surfaces, integration points between modules, state management
-   - **P2 — Medium**: Internal helpers with non-trivial logic, edge cases in algorithms, configuration parsing
-   - **P3 — Low**: Simple getters/setters, pass-through functions, formatting utilities, code that is already well-covered by integration tests
-2. For each gap, define:
-   - What to test (function/class name, specific behavior)
-   - Test type (unit, integration, or end-to-end)
-   - Expected assertions (what the test should verify)
-   - Any mocks or fixtures required
-3. Order the test plan: P0 first, then P1, P2, P3
+1. Classify each test gap from Task 1 into a priority tier using the tier definitions above:
+   - **P0 — Critical**: Auth, payments, security, data mutations, PII, permissions → thorough behavioral coverage
+   - **P1 — High**: Public APIs, module boundaries, state management, core features → happy path + critical errors
+   - **P2 — Medium**: Utilities, helpers, validators with real logic → public surface happy path only
+   - **P3 — Low**: Types, configs, constants, simple wrappers, re-export barrels → **NO TESTS** (explicitly skip)
+2. For each P0-P2 gap, define:
+   - What to test (function/class name, specific **behavior** — not implementation detail)
+   - Expected assertions (what the test verifies — must be mutation-resistant)
+   - Any mocks required (external boundaries only — never mock internal functions)
+3. Order the test plan: P0 first, then P1, P2. List P3 files explicitly as "SKIP — {reason}"
 4. If context files are available, cross-reference against scope requirements to ensure acceptance criteria have corresponding tests
 
 **Do NOT** write any tests in this task — only prioritize and plan.
@@ -67,19 +135,27 @@ Prioritize test gaps using a risk-tiered approach.
 
 ### Task 3: Write Tests and Verify
 
-Implement the test plan from Task 2, starting with P0 and working down.
+Implement the test plan from Task 2, starting with P0 and working down. Apply the test quality requirements and mutation testing mindset from the framework above.
 
 1. For each planned test (in priority order):
    - Create the test file if it does not exist, or add to the existing test file
    - Write the test following the project's existing test patterns and conventions
-   - Use descriptive test names that explain the expected behavior
-   - Include both happy path and primary failure mode for each test opportunity
-2. After writing each batch of tests (per source file):
+   - Use descriptive test names: `when_[condition]_then_[outcome]` or `[action]_should_[result]`
+   - **P0 files**: Test every user-facing outcome + all error paths + edge cases for sensitive inputs
+   - **P1 files**: Test happy path + critical error paths for public functions
+   - **P2 files**: Test public surface happy path only — skip trivial functions
+   - **P3 files**: Write zero tests — skip entirely
+2. Quality check each test before moving on:
+   - Does it assert **outcomes** (not internal call counts)?
+   - Would it **catch a real bug** if the implementation returned a wrong value?
+   - Would it **survive a refactor** that changes internals but preserves behavior?
+   - If any answer is no, rewrite the test
+3. After writing each batch of tests (per source file):
    - Run the new tests to verify they pass
    - Run lint on the test file to ensure compliance
    - If a test fails, fix the test or investigate whether the production code has a bug
      - If production code has a bug, fix it and note the fix
-3. After all tests are written:
+4. After all tests are written:
    - Run the full test suite for the working set (not the entire repo) to verify no regressions
    - Fix any failures before proceeding
 
