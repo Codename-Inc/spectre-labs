@@ -113,6 +113,46 @@ class TestCreateTasksPromptContent:
         )
 
 
+class TestCreateTasksSubagentDispatch:
+    """Tests for optional subagent dispatch in create_tasks.md."""
+
+    def _load_template(self) -> str:
+        return (PROMPTS_DIR / "create_tasks.md").read_text(encoding="utf-8")
+
+    def test_template_contains_subagent_dispatch_instructions(self):
+        """Happy: Template includes optional subagent dispatch via Task tool."""
+        template = self._load_template()
+        assert "Task" in template and "subagent" in template.lower(), (
+            "Template should include optional subagent dispatch instructions for "
+            "complex task breakdowns needing codebase location research"
+        )
+
+    def test_dispatch_references_finder_agent(self):
+        """Happy: Template dispatches @finder subagents for codebase location research."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "finder" in lower, (
+            "Template should reference @finder subagent type for locating files "
+            "during complex task breakdowns"
+        )
+
+    def test_dispatch_is_conditional_on_complexity(self):
+        """Happy: Subagent dispatch is conditional on task complexity or scope size."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "subagent" in lower and ("complex" in lower or "large" in lower or "multiple" in lower), (
+            "Subagent dispatch should be conditional on complexity/scope"
+        )
+
+    def test_dispatch_is_optional_not_mandatory(self):
+        """Failure: Subagent dispatch must be optional, not required for all task breakdowns."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "optional" in lower or "if" in lower or "when" in lower, (
+            "Subagent dispatch should be optional/conditional, not mandatory for every task breakdown"
+        )
+
+
 class TestCreateTasksPromptSubstitution:
     """Tests for create_tasks prompt variable substitution via Stage."""
 

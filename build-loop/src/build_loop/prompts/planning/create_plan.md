@@ -83,6 +83,26 @@ Write the implementation plan to `{output_dir}/specs/plan.md` using this structu
 - Include code snippets or pseudo-code only when they clarify the approach (not for every detail)
 - If the scope docs contain decisions, honor them — do not re-litigate
 
+### Step 3b: Deep Analysis via Subagents (Comprehensive Depth Only)
+
+**When to use**: If `{depth}` is `comprehensive` AND the plan involves multiple integration points or cross-cutting concerns — optionally dispatch @analyst subagents via the Task tool to investigate specific areas in parallel. For `standard` depth or simple features, skip this step.
+
+If the technical approach spans 3+ components or requires understanding complex data flows across module boundaries, dispatch parallel subagents:
+
+**Dispatch all agents in a single message** using multiple Task tool calls:
+
+```
+Task: "You are an analyst subagent. Deeply analyze the integration points for [COMPONENT/CONCERN].
+Read the relevant source files and determine:
+- Exact function signatures and data types at integration boundaries
+- Error handling patterns and edge cases
+- Performance implications and existing optimizations
+- Constraints that the plan must respect (invariants, contracts, backward compat)
+Report: integration analysis with specific file paths, function names, and constraints discovered."
+```
+
+**After all agents complete**, incorporate their findings into the Technical Approach section. Cite specific integration constraints they discovered.
+
 ### Step 4: Emit Completion
 
 After writing `{output_dir}/specs/plan.md`, output this JSON block:

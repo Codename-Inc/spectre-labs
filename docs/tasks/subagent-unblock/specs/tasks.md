@@ -215,16 +215,16 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Existing Step 2 preserved as fallback for small scopes
 
 #### [5.2] Light-Touch Updates to create_plan.md and create_tasks.md
-- [ ] **5.2.1** Add optional subagent dispatch note to `build-loop/src/build_loop/prompts/planning/create_plan.md` for comprehensive-depth plans that need deep analysis of integration points
+- [x] **5.2.1** Add optional subagent dispatch note to `build-loop/src/build_loop/prompts/planning/create_plan.md` for comprehensive-depth plans that need deep analysis of integration points
   - **Produces**: Plan stage can optionally dispatch @analyst subagents for complex features
   - **Consumed by**: Plan stage agent
   - **Replaces**: N/A (additive)
-  - [ ] Optional subagent dispatch instruction added for comprehensive depth plans
-- [ ] **5.2.2** Add optional subagent dispatch note to `build-loop/src/build_loop/prompts/planning/create_tasks.md` for task breakdown that needs codebase location research
+  - [x] Optional subagent dispatch instruction added for comprehensive depth plans
+- [x] **5.2.2** Add optional subagent dispatch note to `build-loop/src/build_loop/prompts/planning/create_tasks.md` for task breakdown that needs codebase location research
   - **Produces**: Task stage can optionally dispatch @finder subagents to locate files for task granularity
   - **Consumed by**: Task stage agent
   - **Replaces**: N/A (additive)
-  - [ ] Optional subagent dispatch instruction added for complex task breakdowns
+  - [x] Optional subagent dispatch instruction added for complex task breakdowns
 
 ---
 

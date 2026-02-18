@@ -88,6 +88,45 @@ class TestCreatePlanPromptContent:
         )
 
 
+class TestCreatePlanSubagentDispatch:
+    """Tests for optional subagent dispatch in create_plan.md."""
+
+    def _load_template(self) -> str:
+        return (PROMPTS_DIR / "create_plan.md").read_text(encoding="utf-8")
+
+    def test_template_contains_subagent_dispatch_instructions(self):
+        """Happy: Template includes optional subagent dispatch via Task tool."""
+        template = self._load_template()
+        assert "Task" in template and "subagent" in template.lower(), (
+            "Template should include optional subagent dispatch instructions for "
+            "comprehensive-depth plans that need deep analysis"
+        )
+
+    def test_dispatch_references_analyst_agent(self):
+        """Happy: Template dispatches @analyst subagents for integration point analysis."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "analyst" in lower, (
+            "Template should reference @analyst subagent type for deep integration analysis"
+        )
+
+    def test_dispatch_is_conditional_on_comprehensive_depth(self):
+        """Happy: Subagent dispatch is only for comprehensive depth, not standard."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "comprehensive" in lower and "subagent" in lower, (
+            "Subagent dispatch should be conditional on comprehensive depth"
+        )
+
+    def test_dispatch_is_optional_not_mandatory(self):
+        """Failure: Subagent dispatch must be optional, not required for all plans."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "optional" in lower or "if" in lower or "when" in lower, (
+            "Subagent dispatch should be optional/conditional, not mandatory for every plan"
+        )
+
+
 class TestCreatePlanPromptSubstitution:
     """Tests for create_plan prompt variable substitution via Stage."""
 

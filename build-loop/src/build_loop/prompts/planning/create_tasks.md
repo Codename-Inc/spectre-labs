@@ -68,6 +68,25 @@ Tasks without consumers are incomplete. If a task produces output, there must be
 - Be specific enough for a developer to know where to start
 - Each sub-task gets 2-3 verifiable acceptance criteria
 
+### Step 3b: Codebase Location Research via Subagents (Complex Breakdowns Only)
+
+**When to use**: If the task breakdown spans multiple modules or directories and you need to locate specific files to write accurate sub-tasks — optionally dispatch @finder subagents via the Task tool to research codebase locations in parallel. For simple or small-scope breakdowns, skip this step.
+
+If the plan references 3+ components and you're uncertain about exact file paths, entry points, or test locations for the tasks you're writing, dispatch parallel subagents:
+
+**Dispatch all agents in a single message** using multiple Task tool calls:
+
+```
+Task: "You are a finder subagent. Locate the exact files and entry points for [COMPONENT/AREA].
+Use Glob and Grep to find:
+- Source files that implement or will be modified for [specific functionality]
+- Test files that cover [area] (framework, naming pattern, fixture locations)
+- Configuration files related to [area]
+Report: file paths with brief descriptions, suggested test file locations for new tests, and any naming conventions observed."
+```
+
+**After all agents complete**, use their findings to write precise sub-tasks with accurate file paths, test locations, and integration points. This prevents the build stage from wasting iterations searching for files.
+
 ### Step 4: Validate Coverage
 
 Cross-reference tasks against extracted requirements:
