@@ -158,14 +158,14 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Max iterations hint: keep low (3), verification should be quick
 
 #### [3.4] Create `test_commit.md` Prompt Template
-- [ ] **3.4.1** Create `build-loop/src/build_loop/prompts/shipping/test_commit.md` containing Task 4 from current `test.md`
+- [x] **3.4.1** Create `build-loop/src/build_loop/prompts/shipping/test_commit.md` containing Task 4 from current `test.md`
   - **Produces**: Prompt template for test commit sub-stage (logical grouping + commit)
   - **Consumed by**: `create_ship_pipeline()` stage config, `Stage.build_prompt()`
   - **Replaces**: Task 4 section of monolithic `test.md`
-  - [ ] Stage all test files + production bug fixes, commit with descriptive message, verify clean state
-  - [ ] Completion signal: `TEST_COMMIT_COMPLETE` (transition to rebase)
-  - [ ] Uses `{working_set_scope}`, `{context_files}` template variables
-  - [ ] Max iterations hint: 1 (single commit operation)
+  - [x] Stage all test files + production bug fixes, commit with descriptive message, verify clean state
+  - [x] Completion signal: `TEST_COMMIT_COMPLETE` (transition to rebase)
+  - [x] Uses `{working_set_scope}`, `{context_files}` template variables
+  - [x] Max iterations hint: 1 (single commit operation)
 
 ---
 
