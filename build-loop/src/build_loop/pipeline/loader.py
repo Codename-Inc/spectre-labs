@@ -410,6 +410,71 @@ PLAN_RESEARCH_DENIED_TOOLS = [
 ]
 
 
+def create_ship_pipeline() -> PipelineConfig:
+    """Create a ship pipeline: clean -> test -> rebase.
+
+    The ship pipeline takes a feature branch from "works on branch" to
+    "landed on main" by running three stages autonomously:
+    - Clean: dead code removal, lint, duplication analysis (7 tasks, max 10 iterations)
+    - Test: risk-tiered test coverage (4 tasks, max 10 iterations)
+    - Rebase: rebase onto parent, resolve conflicts, land via PR or merge (single context, max 3 iterations)
+
+    Returns:
+        PipelineConfig for the 3-stage ship workflow.
+    """
+    prompts_dir = Path(__file__).parent.parent / "prompts" / "shipping"
+
+    stages = {
+        "clean": StageConfig(
+            name="clean",
+            prompt_template=str(prompts_dir / "clean.md"),
+            completion=JsonCompletion(
+                complete_statuses=["CLEAN_TASK_COMPLETE", "CLEAN_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=10,
+            transitions={
+                "CLEAN_TASK_COMPLETE": "clean",
+                "CLEAN_COMPLETE": "test",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "test": StageConfig(
+            name="test",
+            prompt_template=str(prompts_dir / "test.md"),
+            completion=JsonCompletion(
+                complete_statuses=["TEST_TASK_COMPLETE", "TEST_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=10,
+            transitions={
+                "TEST_TASK_COMPLETE": "test",
+                "TEST_COMPLETE": "rebase",
+            },
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+        "rebase": StageConfig(
+            name="rebase",
+            prompt_template=str(prompts_dir / "rebase.md"),
+            completion=JsonCompletion(
+                complete_statuses=["SHIP_COMPLETE"],
+                signal_field="status",
+            ),
+            max_iterations=3,
+            transitions={},
+            denied_tools=PLAN_DENIED_TOOLS,
+        ),
+    }
+
+    return PipelineConfig(
+        name="ship",
+        description="Ship pipeline: clean, test, rebase to land feature branch",
+        stages=stages,
+        start_stage="clean",
+        end_signals=["SHIP_COMPLETE"],
+    )
+
+
 def create_plan_pipeline() -> PipelineConfig:
     """Create a planning pipeline: research -> assess -> [create_plan] -> create_tasks -> plan_review -> req_validate -> [update_docs].
 

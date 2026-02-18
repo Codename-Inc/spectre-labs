@@ -16,6 +16,7 @@ from .loader import (
     create_default_pipeline,
     create_plan_pipeline,
     create_plan_resume_pipeline,
+    create_ship_pipeline,
     load_pipeline,
 )
 from .stage import Stage, StageConfig
@@ -32,5 +33,6 @@ __all__ = [
     "create_default_pipeline",
     "create_plan_pipeline",
     "create_plan_resume_pipeline",
+    "create_ship_pipeline",
     "load_pipeline",
 ]

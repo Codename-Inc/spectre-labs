@@ -28,4 +28,4 @@ spectre-build = "build_loop:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-build_loop = ["prompts/*.md", "prompts/planning/*.md", "server/static/*"]
+build_loop = ["prompts/*.md", "prompts/planning/*.md", "prompts/shipping/*.md", "server/static/*"]

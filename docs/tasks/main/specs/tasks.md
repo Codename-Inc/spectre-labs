@@ -110,17 +110,17 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
 ### Phase 2: Pipeline Infrastructure
 
 #### [2.1] Create Ship Pipeline Factory
-- [ ] **2.1.1** Add `create_ship_pipeline()` function in `loader.py` returning a `PipelineConfig` with name `"ship"`, `start_stage="clean"`, `end_signals=["SHIP_COMPLETE"]`, and 3 `StageConfig` objects. Reuse existing denied tools list (`PLAN_DENIED_TOOLS`) for all stages. Stage configs:
+- [x] **2.1.1** Add `create_ship_pipeline()` function in `loader.py` returning a `PipelineConfig` with name `"ship"`, `start_stage="clean"`, `end_signals=["SHIP_COMPLETE"]`, and 3 `StageConfig` objects. Reuse existing denied tools list (`PLAN_DENIED_TOOLS`) for all stages. Stage configs:
   - **Clean**: `JsonCompletion(complete_statuses=["CLEAN_TASK_COMPLETE", "CLEAN_COMPLETE"], signal_field="status")`, `max_iterations=10`, transitions `{"CLEAN_TASK_COMPLETE": "clean", "CLEAN_COMPLETE": "test"}`, prompt `prompts/shipping/clean.md`
   - **Test**: `JsonCompletion(complete_statuses=["TEST_TASK_COMPLETE", "TEST_COMPLETE"], signal_field="status")`, `max_iterations=10`, transitions `{"TEST_TASK_COMPLETE": "test", "TEST_COMPLETE": "rebase"}`, prompt `prompts/shipping/test.md`
   - **Rebase**: `JsonCompletion(complete_statuses=["SHIP_COMPLETE"], signal_field="status")`, `max_iterations=3`, empty transitions `{}`, prompt `prompts/shipping/rebase.md`
   - **Produces**: `create_ship_pipeline()` factory function returning `PipelineConfig`
   - **Consumed by**: `run_ship_pipeline()` in `cli.py` (1.2.1)
   - **Replaces**: N/A (new factory alongside `create_plan_pipeline()`)
-  - [ ] Returns `PipelineConfig` with `name="ship"`, `start_stage="clean"`, `end_signals=["SHIP_COMPLETE"]`
-  - [ ] Contains exactly 3 stages (clean, test, rebase) with correct completion strategies and transitions
-  - [ ] Rebase stage max_iterations is 3 (single context window)
-  - [ ] Denied tools reuse existing list (blocks AskUserQuestion, WebFetch, WebSearch, Task, EnterPlanMode, NotebookEdit)
+  - [x] Returns `PipelineConfig` with `name="ship"`, `start_stage="clean"`, `end_signals=["SHIP_COMPLETE"]`
+  - [x] Contains exactly 3 stages (clean, test, rebase) with correct completion strategies and transitions
+  - [x] Rebase stage max_iterations is 3 (single context window)
+  - [x] Denied tools reuse existing list (blocks AskUserQuestion, WebFetch, WebSearch, Task, EnterPlanMode, NotebookEdit)
 
 #### [2.2] Implement Ship Hooks
 - [ ] **2.2.1** Add `ship_before_stage()` function in `hooks.py` following the same signature as `plan_before_stage()`. For `"clean"` and `"test"`: snapshot HEAD via `snapshot_head()` from `git_scope.py`
