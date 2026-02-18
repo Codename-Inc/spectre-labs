@@ -921,8 +921,8 @@ def run_ship_pipeline(
             "test_summary": "",
         }
 
-    # Create pipeline config
-    config = create_ship_pipeline()
+    # Create pipeline config (honor user-specified iteration limits)
+    config = create_ship_pipeline(max_iterations=max_iterations)
 
     # Stats with event-based loop counting
     stats = BuildStats()
@@ -953,22 +953,31 @@ def _detect_parent_branch() -> str | None:
     """Detect the parent branch of the current feature branch.
 
     Uses git merge-base with common base branches (main, master, develop).
-    Returns the branch name, or None if detection fails.
+    Returns the nearest ancestor branch (fewest commits between merge-base
+    and HEAD), or None if detection fails.
     """
     import subprocess as _subprocess
 
-    # Try common parent branch names
+    best: tuple[str, int] | None = None  # (branch_name, distance)
+
     for candidate in ("main", "master", "develop"):
         try:
-            _subprocess.check_output(
+            merge_base = _subprocess.check_output(
                 ["git", "merge-base", candidate, "HEAD"],
                 text=True, stderr=_subprocess.DEVNULL,
-            )
-            return candidate
-        except (FileNotFoundError, _subprocess.CalledProcessError):
+            ).strip()
+            # Count commits between merge-base and HEAD — fewer = closer
+            distance_str = _subprocess.check_output(
+                ["git", "rev-list", "--count", f"{merge_base}..HEAD"],
+                text=True, stderr=_subprocess.DEVNULL,
+            ).strip()
+            distance = int(distance_str)
+            if best is None or distance < best[1]:
+                best = (candidate, distance)
+        except (FileNotFoundError, _subprocess.CalledProcessError, ValueError):
             continue
 
-    return None
+    return best[0] if best else None
 
 
 def run_resume(args: argparse.Namespace) -> None:

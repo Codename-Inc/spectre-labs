@@ -27,6 +27,8 @@ class TestRunShipPipelineHappy:
         def mock_check_output(cmd, **kwargs):
             if "merge-base" in cmd:
                 return "abc1234\n"
+            if "rev-list" in cmd and "--count" in cmd:
+                return "5\n"
             if "rev-parse" in cmd and "--abbrev-ref" in cmd:
                 return "feature-branch\n"
             if "log" in cmd and "--oneline" in cmd:
@@ -171,6 +173,8 @@ class TestRunShipPipelineFailure:
         def mock_check_output(cmd, **kwargs):
             if "merge-base" in cmd:
                 return "abc1234\n"
+            if "rev-list" in cmd and "--count" in cmd:
+                return "5\n"
             if "rev-parse" in cmd and "--abbrev-ref" in cmd:
                 return "feature-branch\n"
             if "log" in cmd and "--oneline" in cmd:
