@@ -40,6 +40,46 @@ Using Read, Grep, and Glob, systematically investigate the codebase to understan
 - Make assumptions about architecture without verifying in code
 - Skip reading scope documents before exploring code
 
+### Step 2b: Dispatch Parallel Research Agents (Large Scopes)
+
+**When to use**: If the scope spans multiple modules, directories, or integration points — dispatch parallel research subagents via the Task tool. For small or simple scopes (single file, single module), Step 2 alone is sufficient — skip this step.
+
+After completing your initial broad exploration in Step 2, assess whether parallel research would accelerate understanding. If the scope touches 3+ modules or requires investigating multiple unrelated areas, dispatch specialized subagents:
+
+**Dispatch all agents in a single message** using multiple Task tool calls for parallel execution:
+
+1. **@finder** — Locate files, entry points, and component boundaries
+   ```
+   Task: "You are a codebase finder agent. Search for files and components related to: [AREA].
+   Use Glob and Grep to find:
+   - Source files implementing [specific functionality]
+   - Configuration files related to [area]
+   - Test files covering [area]
+   Report: file paths, brief description of each file's role, and any unexpected locations."
+   ```
+
+2. **@analyst** — Understand code structure, data flow, and dependencies
+   ```
+   Task: "You are a code analyst agent. Analyze how [AREA] works by reading the key files.
+   Focus on:
+   - Public API surface (exports, function signatures, class interfaces)
+   - Data flow (inputs → transformations → outputs)
+   - Dependencies (imports, external services, shared state)
+   Report: architecture summary, key functions with signatures, dependency graph."
+   ```
+
+3. **@patterns** — Find conventions, similar implementations, and testing patterns
+   ```
+   Task: "You are a patterns agent. Find examples of similar implementations in the codebase.
+   Search for:
+   - How the codebase handles similar concerns (naming, structure, error handling)
+   - Test patterns (framework, fixtures, assertion style) for similar code
+   - Configuration conventions and build/tooling patterns
+   Report: conventions list, example file paths, recommended patterns to follow."
+   ```
+
+**After all agents complete**, wait for all Task tool results, then consolidate their findings with your own Step 2 exploration. Synthesize into a unified understanding before writing `task_context.md`.
+
 ### Step 3: Write Findings
 
 Write your research findings to `{output_dir}/task_context.md` using this structure:

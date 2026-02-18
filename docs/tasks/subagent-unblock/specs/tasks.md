@@ -204,15 +204,15 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
 ### Phase 5: Add Subagent Dispatch to Plan Research
 
 #### [5.1] Update Research Prompt with Parallel Subagent Dispatch
-- [ ] **5.1.1** Add parallel subagent dispatch instructions to `build-loop/src/build_loop/prompts/planning/research.md` after Step 2, modeled after original `/spectre:research` Step 3 (`/Users/joe/Dev/spectre/plugins/spectre/commands/research.md` lines 42-55)
+- [x] **5.1.1** Add parallel subagent dispatch instructions to `build-loop/src/build_loop/prompts/planning/research.md` after Step 2, modeled after original `/spectre:research` Step 3 (`/Users/joe/Dev/spectre/plugins/spectre/commands/research.md` lines 42-55)
   - **Produces**: Research stage prompt that dispatches parallel @finder, @analyst, @patterns subagents via Task tool
   - **Consumed by**: Research stage agent during plan pipeline execution
   - **Replaces**: Previous sequential Read/Grep/Glob-only exploration instructions
-  - [ ] Step 2b added: "Dispatch Parallel Research Agents" with Task tool dispatch for @finder, @analyst, @patterns
-  - [ ] Conditional: only dispatch subagents for larger scopes (multiple modules)
-  - [ ] Single-message parallel dispatch instruction included
-  - [ ] Wait-for-all synchronization before consolidation into `task_context.md`
-  - [ ] Existing Step 2 preserved as fallback for small scopes
+  - [x] Step 2b added: "Dispatch Parallel Research Agents" with Task tool dispatch for @finder, @analyst, @patterns
+  - [x] Conditional: only dispatch subagents for larger scopes (multiple modules)
+  - [x] Single-message parallel dispatch instruction included
+  - [x] Wait-for-all synchronization before consolidation into `task_context.md`
+  - [x] Existing Step 2 preserved as fallback for small scopes
 
 #### [5.2] Light-Touch Updates to create_plan.md and create_tasks.md
 - [ ] **5.2.1** Add optional subagent dispatch note to `build-loop/src/build_loop/prompts/planning/create_plan.md` for comprehensive-depth plans that need deep analysis of integration points

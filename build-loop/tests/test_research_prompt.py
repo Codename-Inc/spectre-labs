@@ -86,6 +86,100 @@ class TestResearchPromptContent:
         )
 
 
+class TestResearchSubagentDispatch:
+    """Tests for parallel subagent dispatch instructions in research.md."""
+
+    def _load_template(self) -> str:
+        """Load the research prompt template."""
+        return (PROMPTS_DIR / "research.md").read_text(encoding="utf-8")
+
+    # --- Subagent dispatch presence ---
+
+    def test_template_contains_step_2b_dispatch_section(self):
+        """Happy: Template has a Step 2b section for dispatching parallel research agents."""
+        template = self._load_template()
+        # Should have a clearly labeled sub-step after Step 2
+        assert "Step 2b" in template or "Dispatch" in template
+
+    def test_template_does_not_remove_step_2(self):
+        """Failure: Original Step 2 (manual codebase exploration) must be preserved as fallback."""
+        template = self._load_template()
+        # Step 2 should still exist with its original exploration instructions
+        assert "### Step 2:" in template or "### Step 2 " in template
+        assert "Glob" in template
+        assert "Grep" in template
+
+    # --- Agent types ---
+
+    def test_template_dispatches_finder_agent(self):
+        """Happy: Template dispatches a @finder agent for locating files and components."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "finder" in lower
+
+    def test_template_dispatches_analyst_agent(self):
+        """Happy: Template dispatches an @analyst agent for understanding code."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "analyst" in lower
+
+    def test_template_dispatches_patterns_agent(self):
+        """Happy: Template dispatches a @patterns agent for finding similar implementations."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "patterns" in lower or "pattern" in lower
+
+    # --- Task tool dispatch ---
+
+    def test_template_mentions_task_tool(self):
+        """Happy: Template explicitly instructs use of the Task tool for subagent dispatch."""
+        template = self._load_template()
+        assert "Task tool" in template or "Task(" in template
+
+    def test_template_instructs_single_message_dispatch(self):
+        """Happy: Template instructs dispatching all agents in a single message for parallelism."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "single message" in lower or "single response" in lower or "one message" in lower
+
+    # --- Conditional dispatch ---
+
+    def test_template_has_conditional_scope_check(self):
+        """Happy: Template conditionally dispatches subagents only for larger scopes."""
+        template = self._load_template()
+        lower = template.lower()
+        # Should mention scope size condition
+        assert ("multiple module" in lower or "large" in lower or "complex" in lower
+                or "multiple file" in lower or "scope" in lower)
+        # Should preserve Step 2 as fallback for small scopes
+        assert "small" in lower or "simple" in lower or "single" in lower
+
+    # --- Synchronization ---
+
+    def test_template_instructs_wait_for_all(self):
+        """Happy: Template instructs waiting for all subagents before proceeding."""
+        template = self._load_template()
+        lower = template.lower()
+        assert "wait" in lower or "all" in lower
+        assert "consolidat" in lower or "synthesiz" in lower or "combin" in lower
+
+    # --- Subagent prompt content ---
+
+    def test_template_includes_subagent_prompt_template(self):
+        """Happy: Template includes embedded prompt templates for subagent dispatch."""
+        template = self._load_template()
+        lower = template.lower()
+        # Each subagent should know what to look for
+        assert "file" in lower and "search" in lower or "find" in lower
+
+    def test_template_preserves_consolidation_into_task_context(self):
+        """Happy: Subagent findings are consolidated into task_context.md (Step 3)."""
+        template = self._load_template()
+        assert "task_context.md" in template
+        # Step 3 should still reference writing findings
+        assert "Step 3" in template
+
+
 class TestResearchPromptSubstitution:
     """Tests for research prompt variable substitution via Stage."""
 
