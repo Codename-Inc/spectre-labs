@@ -159,13 +159,13 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
   - [x] Includes clear STOP instructions between tasks and JSON completion block format
 
 #### [3.3] Create Rebase Stage Prompt
-- [ ] **3.3.1** Create `prompts/shipping/rebase.md` as a single context window (not decomposed into tasks). Uses `{parent_branch}`, `{clean_summary}`, `{test_summary}` context variables. Covers: confirm target branch, prepare (commit uncommitted, fetch, create safety ref), execute rebase, resolve conflicts, verify (lint + tests pass), land via PR (`gh pr create` with template detection) or local merge (stash approval via `read -p` in Bash), summary. Emits `{"status": "SHIP_COMPLETE"}`
+- [x] **3.3.1** Create `prompts/shipping/rebase.md` as a single context window (not decomposed into tasks). Uses `{parent_branch}`, `{clean_summary}`, `{test_summary}` context variables. Covers: confirm target branch, prepare (commit uncommitted, fetch, create safety ref), execute rebase, resolve conflicts, verify (lint + tests pass), land via PR (`gh pr create` with template detection) or local merge (stash approval via `read -p` in Bash), summary. Emits `{"status": "SHIP_COMPLETE"}`
   - **Produces**: Rebase stage prompt template file
   - **Consumed by**: `Stage.build_prompt()` during rebase stage execution (2.1.1)
   - **Replaces**: N/A (new file)
-  - [ ] Template uses `{parent_branch}`, `{clean_summary}`, `{test_summary}` placeholder variables
-  - [ ] Includes PR creation logic with `gh auth status` check and PR template detection
-  - [ ] Includes local merge fallback with stash approval flow using `read -p` via Bash
+  - [x] Template uses `{parent_branch}`, `{clean_summary}`, `{test_summary}` placeholder variables
+  - [x] Includes PR creation logic with `gh auth status` check and PR template detection
+  - [x] Includes local merge fallback with stash approval flow using `read -p` via Bash
 
 ### Phase 4: Integration and Support Modules
 
