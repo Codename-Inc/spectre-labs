@@ -99,13 +99,13 @@ Add a `--ship` flag to `spectre-build` that runs a 3-stage autonomous pipeline (
   - [x] Returns `tuple[int, int]` (exit_code, total_iterations)
 
 #### [1.3] Add Ship to Interactive Mode
-- [ ] **1.3.1** Add `"ship"` option to `prompt_for_mode()` in `cli.py`. When selected, prompt for optional context files, confirm detected parent branch, and call `run_ship_pipeline()`
+- [x] **1.3.1** Add `"ship"` option to `prompt_for_mode()` in `cli.py`. When selected, prompt for optional context files, confirm detected parent branch, and call `run_ship_pipeline()`
   - **Produces**: Interactive ship entry point
   - **Consumed by**: Users invoking `spectre-build` with no flags
   - **Replaces**: N/A (new option in existing menu)
-  - [ ] `"ship"` appears as a selectable option in interactive mode
-  - [ ] Interactive flow prompts for optional context files (not required)
-  - [ ] Detected parent branch is displayed for user confirmation before proceeding
+  - [x] `"ship"` appears as a selectable option in interactive mode
+  - [x] Interactive flow prompts for optional context files (not required)
+  - [x] Detected parent branch is displayed for user confirmation before proceeding
 
 ### Phase 2: Pipeline Infrastructure
 

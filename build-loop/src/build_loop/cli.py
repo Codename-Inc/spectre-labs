@@ -355,16 +355,16 @@ def prompt_for_validate() -> bool:
 
 def prompt_for_mode() -> str:
     """Interactively prompt for execution mode."""
-    print("Mode [build/plan] (build): ", end="")
+    print("Mode [build/plan/ship] (build): ", end="")
     response = input().strip().lower()
 
     if not response:
         return "build"
 
-    if response in ("build", "plan"):
+    if response in ("build", "plan", "ship"):
         return response
 
-    print(f"Invalid choice. Using default: build")
+    print("Invalid choice. Using default: build")
     return "build"
 
 
@@ -1359,6 +1359,51 @@ def main() -> None:
                 if input().strip().lower() in ("y", "yes"):
                     print(f"\n🔗 Starting build from manifest: {manifest_path}\n")
                     run_manifest(manifest_path, args)  # calls sys.exit internally
+
+            sys.exit(exit_code)
+
+        elif mode == "ship":
+            context_files = prompt_for_context_files()
+            context_files = [str(Path(normalize_path(f)).resolve()) for f in context_files]
+            max_iterations = prompt_for_max_iterations()
+            agent = prompt_for_agent()
+            project_name = Path.cwd().name
+
+            # Detect parent branch — fail fast on failure
+            parent_branch = _detect_parent_branch()
+            if not parent_branch:
+                print("Error: Could not detect parent branch.", file=sys.stderr)
+                print("  Ensure you are on a feature branch (not detached HEAD).", file=sys.stderr)
+                sys.exit(1)
+
+            # Confirm parent branch with user
+            print(f"Parent branch: {parent_branch}")
+            print("Proceed with ship? [Y/n]: ", end="")
+            response = input().strip().lower()
+            if response and response not in ("y", "yes"):
+                print("Cancelled.")
+                sys.exit(0)
+
+            start_time = time.time()
+
+            save_session("", context_files, max_iterations, agent=agent, ship=True)
+
+            exit_code, iterations_completed = run_ship_pipeline(
+                context_files=context_files,
+                max_iterations=max_iterations,
+                agent=agent,
+            )
+
+            duration = time.time() - start_time
+            duration_str = format_duration(duration)
+
+            if send_notification:
+                notify_ship_complete(
+                    stages_completed=iterations_completed,
+                    total_time=duration_str,
+                    success=(exit_code == 0),
+                    project=project_name,
+                )
 
             sys.exit(exit_code)
 
