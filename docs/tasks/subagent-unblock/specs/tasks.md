@@ -61,27 +61,27 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] `PLAN_RESEARCH_DENIED_TOOLS` contains exactly: `["AskUserQuestion", "EnterPlanMode", "NotebookEdit"]`
 
 #### [1.2] Wire Per-Stage Tool Filtering from StageConfig Through to Runner
-- [ ] **1.2.1** Extend `AgentRunner.run_iteration()` abstract signature in `build-loop/src/build_loop/agent.py` to accept `denied_tools: list[str] | None = None`
+- [x] **1.2.1** Extend `AgentRunner.run_iteration()` abstract signature in `build-loop/src/build_loop/agent.py` to accept `denied_tools: list[str] | None = None`
   - **Produces**: Abstract base class supports per-call tool overrides
   - **Consumed by**: `ClaudeRunner`, `CodexRunner`, `Stage.run_iteration()`
   - **Replaces**: Previous signature `(self, prompt, timeout=None, stats=None)`
-  - [ ] `AgentRunner.run_iteration()` has `denied_tools` parameter with default `None`
-- [ ] **1.2.2** Update `ClaudeRunner.run_iteration()` to use `denied_tools` parameter when provided, falling back to `CLAUDE_DENIED_TOOLS` when `None`
+  - [x] `AgentRunner.run_iteration()` has `denied_tools` parameter with default `None`
+- [x] **1.2.2** Update `ClaudeRunner.run_iteration()` to use `denied_tools` parameter when provided, falling back to `CLAUDE_DENIED_TOOLS` when `None`
   - **Produces**: `claude -p --disallowedTools` uses per-stage list when available
   - **Consumed by**: All pipeline stages via `Stage.run_iteration()`
   - **Replaces**: Hardcoded `CLAUDE_DENIED_TOOLS` in command construction
-  - [ ] When `denied_tools` is `None`, uses `CLAUDE_DENIED_TOOLS` (backward compat)
-  - [ ] When `denied_tools` is a list, uses that list instead
-- [ ] **1.2.3** Update `CodexRunner.run_iteration()` to accept `denied_tools` parameter (ignore it — Codex has no equivalent)
+  - [x] When `denied_tools` is `None`, uses `CLAUDE_DENIED_TOOLS` (backward compat)
+  - [x] When `denied_tools` is a list, uses that list instead
+- [x] **1.2.3** Update `CodexRunner.run_iteration()` to accept `denied_tools` parameter (ignore it — Codex has no equivalent)
   - **Produces**: Interface compatibility with updated abstract base
   - **Consumed by**: N/A (parameter accepted but unused)
   - **Replaces**: Previous signature without `denied_tools`
-  - [ ] `CodexRunner.run_iteration()` accepts `denied_tools` parameter without error
-- [ ] **1.2.4** Update `Stage.run_iteration()` in `build-loop/src/build_loop/pipeline/stage.py` (line 148) to pass `self.config.denied_tools` to `self.runner.run_iteration()`
+  - [x] `CodexRunner.run_iteration()` accepts `denied_tools` parameter without error
+- [x] **1.2.4** Update `Stage.run_iteration()` in `build-loop/src/build_loop/pipeline/stage.py` (line 148) to pass `self.config.denied_tools` to `self.runner.run_iteration()`
   - **Produces**: Per-stage tool filtering is active — `StageConfig.denied_tools` actually takes effect
   - **Consumed by**: All pipeline stages
   - **Replaces**: Previous call that ignored `self.config.denied_tools`
-  - [ ] `self.runner.run_iteration()` receives `denied_tools=self.config.denied_tools`
+  - [x] `self.runner.run_iteration()` receives `denied_tools=self.config.denied_tools`
 
 ---
 

@@ -34,6 +34,7 @@ class AgentRunner(ABC):
         prompt: str,
         timeout: int | None = None,
         stats: BuildStats | None = None,
+        denied_tools: list[str] | None = None,
     ) -> tuple[int, str, str]:
         """Execute one build iteration.
 
@@ -41,6 +42,9 @@ class AgentRunner(ABC):
             prompt: The full prompt to send to the agent
             timeout: Optional timeout in seconds
             stats: Optional BuildStats to track usage
+            denied_tools: Per-stage tool denylist override. When provided,
+                replaces the global denied tools for this invocation.
+                None means use the global default.
 
         Returns:
             Tuple of (exit_code, full_text_output, error_output)
@@ -88,11 +92,12 @@ class ClaudeRunner(AgentRunner):
     def check_available(self) -> bool:
         return shutil.which("claude") is not None
 
-    def run_iteration(self, prompt, timeout=None, stats=None):
+    def run_iteration(self, prompt, timeout=None, stats=None, denied_tools=None):
+        effective_denied = denied_tools if denied_tools is not None else CLAUDE_DENIED_TOOLS
         cmd = [
             "claude", "-p",
             "--allowedTools", ",".join(CLAUDE_ALLOWED_TOOLS),
-            "--disallowedTools", ",".join(CLAUDE_DENIED_TOOLS),
+            "--disallowedTools", ",".join(effective_denied),
             "--output-format", "stream-json",
             "--verbose",
         ]
@@ -163,7 +168,7 @@ class CodexRunner(AgentRunner):
     def check_available(self) -> bool:
         return shutil.which("codex") is not None
 
-    def run_iteration(self, prompt, timeout=None, stats=None):
+    def run_iteration(self, prompt, timeout=None, stats=None, denied_tools=None):
         from .codex_env import setup_codex_home
 
         # Sync credentials for sandboxed execution

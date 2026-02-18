@@ -146,7 +146,7 @@ class Stage:
 
         try:
             exit_code, output, stderr = self.runner.run_iteration(
-                prompt, stats=stats
+                prompt, stats=stats, denied_tools=self.config.denied_tools
             )
         except Exception as e:
             logger.error("Stage '%s' iteration failed: %s", self.name, e)
