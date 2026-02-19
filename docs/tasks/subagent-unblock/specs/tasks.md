@@ -265,26 +265,26 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Tests pass for all 8 sub-stage name permutations in before/after hooks
 
 #### [7.3] Update Integration and Prompt Tests
-- [ ] **7.3.1** Update `build-loop/tests/test_run_ship_pipeline.py` to work with the new 8-stage `create_ship_pipeline()` factory
+- [x] **7.3.1** Update `build-loop/tests/test_run_ship_pipeline.py` to work with the new 8-stage `create_ship_pipeline()` factory
   - **Produces**: Passing integration tests for `run_ship_pipeline()`
   - **Consumed by**: CI
   - **Replaces**: Previous integration tests with 3-stage factory mock
-  - [ ] Happy path test passes with new factory
-  - [ ] Resume test passes
-  - [ ] Failure path tests pass
-- [ ] **7.3.2** Update or create prompt content tests for the 7 new sub-stage prompt files: verify each contains correct template variables, completion signals, and (where applicable) subagent dispatch instructions
+  - [x] Happy path test passes with new factory
+  - [x] Resume test passes
+  - [x] Failure path tests pass
+- [x] **7.3.2** Update or create prompt content tests for the 7 new sub-stage prompt files: verify each contains correct template variables, completion signals, and (where applicable) subagent dispatch instructions
   - **Produces**: Passing prompt content tests
   - **Consumed by**: CI
   - **Replaces**: Previous `test_clean_prompt.py` and `test_test_prompt.py`
-  - [ ] Each new prompt file has a test that validates template variables present
-  - [ ] Each new prompt file has a test that validates completion signal names in output format
-  - [ ] `clean_investigate.md` test verifies subagent dispatch instructions exist
-  - [ ] `test_execute.md` test verifies subagent dispatch instructions exist
-- [ ] **7.3.3** Update `build-loop/tests/test_ship_cli.py`, `test_ship_stats.py`, and any other ship tests that reference old stage names or tool lists
+  - [x] Each new prompt file has a test that validates template variables present
+  - [x] Each new prompt file has a test that validates completion signal names in output format
+  - [x] `clean_investigate.md` test verifies subagent dispatch instructions exist
+  - [x] `test_execute.md` test verifies subagent dispatch instructions exist
+- [x] **7.3.3** Update `build-loop/tests/test_ship_cli.py`, `test_ship_stats.py`, and any other ship tests that reference old stage names or tool lists
   - **Produces**: Full ship test suite passes
   - **Consumed by**: CI
   - **Replaces**: Tests referencing old 3-stage names
-  - [ ] `pytest tests/ -k ship -v` — all tests pass
+  - [x] `pytest tests/ -k ship -v` — all tests pass
 
 ---
 

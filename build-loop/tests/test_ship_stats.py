@@ -62,11 +62,16 @@ class TestShipEventHandler:
         stats = BuildStats()
         handler = create_ship_event_handler(stats)
 
-        handler(StageCompletedEvent(stage="clean", signal="CLEAN_COMPLETE", iterations=3))
-        handler(StageCompletedEvent(stage="test", signal="TEST_COMPLETE", iterations=2))
+        handler(StageCompletedEvent(stage="clean_discover", signal="CLEAN_DISCOVER_COMPLETE", iterations=2))
+        handler(StageCompletedEvent(stage="clean_investigate", signal="CLEAN_INVESTIGATE_COMPLETE", iterations=3))
+        handler(StageCompletedEvent(stage="clean_execute", signal="CLEAN_EXECUTE_COMPLETE", iterations=2))
+        handler(StageCompletedEvent(stage="test_plan", signal="TEST_PLAN_COMPLETE", iterations=1))
+        handler(StageCompletedEvent(stage="test_execute", signal="TEST_EXECUTE_COMPLETE", iterations=2))
+        handler(StageCompletedEvent(stage="test_verify", signal="TEST_VERIFY_COMPLETE", iterations=1))
+        handler(StageCompletedEvent(stage="test_commit", signal="TEST_COMMIT_COMPLETE", iterations=1))
         handler(StageCompletedEvent(stage="rebase", signal="SHIP_COMPLETE", iterations=1))
 
-        assert stats.ship_loops == 3
+        assert stats.ship_loops == 8
 
     def test_ignores_non_stage_completed_events(self):
         """Failure: Handler does not increment ship_loops for other event types."""
@@ -75,7 +80,7 @@ class TestShipEventHandler:
         stats = BuildStats()
         handler = create_ship_event_handler(stats)
 
-        handler(StageStartedEvent(stage="clean"))
-        handler(StageStartedEvent(stage="test"))
+        handler(StageStartedEvent(stage="clean_discover"))
+        handler(StageStartedEvent(stage="test_plan"))
 
         assert stats.ship_loops == 0
