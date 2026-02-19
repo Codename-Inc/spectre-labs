@@ -147,16 +147,16 @@ Replace per-task fresh-session build model with phase owners that dispatch paral
   - [x] `collect_diff()` returns all files changed by all subagents in the phase
   - [x] `format_commits()` returns all subagent commit messages
 
-#### [3.2] End-to-end dry run test
-- [ ] **3.2.1** Create a small test tasks file with 2 phases, 2-3 tasks each, with wave structure defined. Run a build with the phase owner prompt to verify: phase owner reads context once, dispatches subagents per wave, subagents complete and return reports, phase owner aggregates and emits PHASE_COMPLETE
+#### [x] [3.2] End-to-end dry run test
+- [x] **3.2.1** Create a small test tasks file with 2 phases, 2-3 tasks each, with wave structure defined. Run a build with the phase owner prompt to verify: phase owner reads context once, dispatches subagents per wave, subagents complete and return reports, phase owner aggregates and emits PHASE_COMPLETE
   - **Produces**: Verified E2E flow with phase owner pattern
   - **Consumed by**: Confidence that the system works before broader use
   - **Replaces**: N/A (verification task)
-  - [ ] Phase owner dispatches parallel subagents successfully via Task tool
-  - [ ] Subagents complete tasks, commit, and return completion reports
-  - [ ] Phase owner emits correct promise tag with enhanced artifact JSON
-  - [ ] Code review receives isolated context (task descriptions + git diff only)
-  - [ ] Validate stage works unchanged
+  - [x] Phase owner dispatches parallel subagents successfully via Task tool
+  - [x] Subagents complete tasks, commit, and return completion reports
+  - [x] Phase owner emits correct promise tag with enhanced artifact JSON
+  - [x] Code review receives isolated context (task descriptions + git diff only)
+  - [x] Validate stage works unchanged
 
 ### Phase 4: Token Tracking (Follow-up)
 
