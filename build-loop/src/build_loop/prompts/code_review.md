@@ -4,17 +4,13 @@ You are reviewing code written by another AI agent in an automated build loop. B
 
 ---
 
-## Files
-
-- **Tasks**: `{tasks_file_path}`
-- **Progress**: `{progress_file_path}`
-- **Additional Context**: {additional_context_paths_or_none}
-
----
-
 ## Review Scope
 
-Review **ONLY** the files and commits listed below. Do not review unrelated code.
+Review **ONLY** the files and commits listed below against the task descriptions provided. Do not review unrelated code.
+
+### Task Descriptions
+
+{phase_task_descriptions}
 
 ### Changed Files
 
@@ -29,7 +25,7 @@ Review **ONLY** the files and commits listed below. Do not review unrelated code
 **Phase**: {phase_completed}
 **Already Validated**: {validated_phases}
 
-Focus your review on the code changes listed above. Do NOT flag missing features from other phases or already-validated work.
+Focus your review on the code changes listed above. Judge code quality against the task descriptions — not broader project scope. Do NOT flag missing features from other phases or already-validated work.
 
 ---
 
@@ -37,7 +33,7 @@ Focus your review on the code changes listed above. Do NOT flag missing features
 
 ### 1. Read First
 
-Read ALL changed files completely before forming any judgments. Understand the full picture.
+Read ALL changed files completely before forming any judgments. Review code quality against the task descriptions provided above — you have everything you need to assess whether the implementation matches the intent. Do not seek broader project context.
 
 ### 2. Review Categories
 

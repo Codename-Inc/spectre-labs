@@ -111,22 +111,22 @@ Replace per-task fresh-session build model with phase owners that dispatch paral
   - [x] Default max_iterations set appropriately for phase-level iteration
   - [x] `max_build_iterations` parameter in `create_default_pipeline()` still allows caller override
 
-#### [2.2] Update code review prompt for context isolation
-- [ ] **2.2.1** Remove full context variable references from `code_review.md`. Replace the Files section that currently references `{tasks_file_path}`, `{progress_file_path}`, and `{additional_context_paths_or_none}` with a reference to `{phase_task_descriptions}` only
+#### [x] [2.2] Update code review prompt for context isolation
+- [x] **2.2.1** Remove full context variable references from `code_review.md`. Replace the Files section that currently references `{tasks_file_path}`, `{progress_file_path}`, and `{additional_context_paths_or_none}` with a reference to `{phase_task_descriptions}` only
   - **Produces**: Updated code_review.md prompt with isolated context
   - **Consumed by**: `Stage.build_prompt()` substitutes variables from context dict
   - **Replaces**: Current Files section with full doc references
-  - [ ] `{tasks_file_path}`, `{progress_file_path}`, `{additional_context_paths_or_none}` removed from prompt
-  - [ ] `{phase_task_descriptions}` variable added — contains full text of tasks completed in the phase
-  - [ ] Existing variables preserved: `{changed_files}`, `{commit_messages}`, `{phase_completed}`, `{validated_phases}`, `{review_fixes_path}`
+  - [x] `{tasks_file_path}`, `{progress_file_path}`, `{additional_context_paths_or_none}` removed from prompt
+  - [x] `{phase_task_descriptions}` variable added — contains full text of tasks completed in the phase
+  - [x] Existing variables preserved: `{changed_files}`, `{commit_messages}`, `{phase_completed}`, `{validated_phases}`, `{review_fixes_path}`
 
-- [ ] **2.2.2** Update review scope instructions to reflect the intentional isolation. Code review agent should understand it's reviewing code quality against task descriptions, not broader project scope. Adjust the "Read First" instructions since the agent no longer reads tasks/progress files
+- [x] **2.2.2** Update review scope instructions to reflect the intentional isolation. Code review agent should understand it's reviewing code quality against task descriptions, not broader project scope. Adjust the "Read First" instructions since the agent no longer reads tasks/progress files
   - **Produces**: Updated Instructions section in code_review.md
   - **Consumed by**: Code review agent follows these instructions during review
   - **Replaces**: Current instructions that assume agent reads full project context
-  - [ ] Instructions direct agent to review code against provided task descriptions
-  - [ ] "Read First" section updated: reads changed files and task descriptions, not scope docs
-  - [ ] Review categories, severity scale, and approval threshold unchanged
+  - [x] Instructions direct agent to review code against provided task descriptions
+  - [x] "Read First" section updated: reads changed files and task descriptions, not scope docs
+  - [x] Review categories, severity scale, and approval threshold unchanged
 
 ### Phase 3: Integration Verification
 
