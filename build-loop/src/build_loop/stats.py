@@ -4,7 +4,9 @@ Build statistics tracking.
 Tracks token usage, tool calls, and timing across build iterations.
 """
 
+import json
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -66,6 +68,11 @@ class BuildStats:
     validate_loops: int = 0
     plan_loops: int = 0
     ship_loops: int = 0
+    session_id: str = ""
+    jsonl_input_tokens: int = 0
+    jsonl_output_tokens: int = 0
+    jsonl_cache_read_tokens: int = 0
+    jsonl_cache_write_tokens: int = 0
 
     def to_dict(self) -> dict:
         """Serialize stats to a JSON-compatible dict for session persistence."""
@@ -86,6 +93,11 @@ class BuildStats:
             "validate_loops": self.validate_loops,
             "plan_loops": self.plan_loops,
             "ship_loops": self.ship_loops,
+            "session_id": self.session_id,
+            "jsonl_input_tokens": self.jsonl_input_tokens,
+            "jsonl_output_tokens": self.jsonl_output_tokens,
+            "jsonl_cache_read_tokens": self.jsonl_cache_read_tokens,
+            "jsonl_cache_write_tokens": self.jsonl_cache_write_tokens,
         }
 
     @classmethod
@@ -111,6 +123,19 @@ class BuildStats:
         stats.validate_loops = data.get("validate_loops", 0)
         stats.plan_loops = data.get("plan_loops", 0)
         stats.ship_loops = data.get("ship_loops", 0)
+        stats.session_id = data.get("session_id", "")
+        stats.jsonl_input_tokens = data.get(
+            "jsonl_input_tokens", 0
+        )
+        stats.jsonl_output_tokens = data.get(
+            "jsonl_output_tokens", 0
+        )
+        stats.jsonl_cache_read_tokens = data.get(
+            "jsonl_cache_read_tokens", 0
+        )
+        stats.jsonl_cache_write_tokens = data.get(
+            "jsonl_cache_write_tokens", 0
+        )
         return stats
 
     def merge(self, other: "BuildStats") -> None:
@@ -137,6 +162,16 @@ class BuildStats:
         self.validate_loops += other.validate_loops
         self.plan_loops += other.plan_loops
         self.ship_loops += other.ship_loops
+        if other.session_id:
+            self.session_id = other.session_id
+        self.jsonl_input_tokens += other.jsonl_input_tokens
+        self.jsonl_output_tokens += other.jsonl_output_tokens
+        self.jsonl_cache_read_tokens += (
+            other.jsonl_cache_read_tokens
+        )
+        self.jsonl_cache_write_tokens += (
+            other.jsonl_cache_write_tokens
+        )
 
     def add_usage(self, usage: dict) -> None:
         """Add token usage from a result event."""
@@ -144,6 +179,22 @@ class BuildStats:
         self.total_output_tokens += usage.get("output_tokens", 0)
         self.total_cache_read_tokens += usage.get("cache_read_input_tokens", 0)
         self.total_cache_write_tokens += usage.get("cache_creation_input_tokens", 0)
+
+    def add_jsonl_usage(self, jsonl_path: str) -> None:
+        """Parse a JSONL transcript and add its tokens.
+
+        Calls parse_session_tokens() and accumulates into
+        the jsonl_* counters for JSONL-sourced token tracking.
+        """
+        tokens = parse_session_tokens(jsonl_path)
+        self.jsonl_input_tokens += tokens["input_tokens"]
+        self.jsonl_output_tokens += tokens["output_tokens"]
+        self.jsonl_cache_read_tokens += tokens.get(
+            "cache_read_input_tokens", 0
+        )
+        self.jsonl_cache_write_tokens += tokens.get(
+            "cache_creation_input_tokens", 0
+        )
 
     def calculate_cost(self) -> float:
         """Calculate cost from token counts and model pricing.
@@ -305,6 +356,97 @@ class BuildStats:
         print(f"│  RANK: {rank:<5}              exit 0   │")
         print("╰──────────────────────────────────────╯")
         print()
+
+
+def parse_session_tokens(jsonl_path: str) -> dict[str, Any]:
+    """Parse a Claude CLI JSONL transcript and aggregate token usage.
+
+    Reads assistant events from the transcript, extracts usage data
+    from each message, and sums token counts across all turns.
+
+    Args:
+        jsonl_path: Path to a Claude CLI session JSONL transcript.
+
+    Returns:
+        Dict with keys: input_tokens, output_tokens,
+        cache_read_input_tokens, cache_creation_input_tokens, model.
+        All token values default to 0 if not found. model defaults
+        to empty string.
+    """
+    totals: dict[str, Any] = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "model": "",
+    }
+
+    try:
+        with open(jsonl_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                if event.get("type") != "assistant":
+                    continue
+
+                message = event.get("message", {})
+
+                if not totals["model"] and message.get("model"):
+                    totals["model"] = message["model"]
+
+                usage = message.get("usage")
+                if not usage:
+                    continue
+
+                totals["input_tokens"] += usage.get(
+                    "input_tokens", 0
+                )
+                totals["output_tokens"] += usage.get(
+                    "output_tokens", 0
+                )
+                totals["cache_read_input_tokens"] += usage.get(
+                    "cache_read_input_tokens", 0
+                )
+                totals["cache_creation_input_tokens"] += usage.get(
+                    "cache_creation_input_tokens", 0
+                )
+    except FileNotFoundError:
+        logger.warning(
+            "Session JSONL not found: %s", jsonl_path
+        )
+
+    return totals
+
+
+def find_session_jsonl(
+    session_id: str | None,
+    project_dir: str | None = None,
+) -> str | None:
+    """Locate a session's JSONL transcript file.
+
+    Args:
+        session_id: Claude session UUID.
+        project_dir: Directory containing JSONL files.
+            Typically ~/.claude/projects/{project-hash}/.
+
+    Returns:
+        Absolute path to the JSONL file, or None if not found.
+    """
+    if not session_id:
+        return None
+    if not project_dir or not os.path.isdir(project_dir):
+        return None
+
+    path = os.path.join(project_dir, f"{session_id}.jsonl")
+    if os.path.isfile(path):
+        return os.path.abspath(path)
+    return None
 
 
 def create_plan_event_handler(stats: "BuildStats") -> Callable[[Any], None]:

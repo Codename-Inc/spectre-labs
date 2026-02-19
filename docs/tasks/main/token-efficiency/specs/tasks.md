@@ -160,23 +160,23 @@ Replace per-task fresh-session build model with phase owners that dispatch paral
 
 ### Phase 4: Token Tracking (Follow-up)
 
-#### [4.1] Add JSONL-based token tracking for subagent usage
-- [ ] **4.1.1** Create a `parse_session_tokens(jsonl_path)` utility in `stats.py` that reads a Claude CLI JSONL transcript, identifies `result` events (including from subagent Task tool dispatches), and aggregates input/output/cache token counts
+#### [x] [4.1] Add JSONL-based token tracking for subagent usage
+- [x] **4.1.1** Create a `parse_session_tokens(jsonl_path)` utility in `stats.py` that reads a Claude CLI JSONL transcript, identifies `result` events (including from subagent Task tool dispatches), and aggregates input/output/cache token counts
   - **Produces**: `parse_session_tokens()` function returning aggregated token usage dict
   - **Consumed by**: `BuildStats` integration (4.1.2)
   - **Replaces**: Current stream-only tracking that misses subagent tokens
-  - [ ] Parses JSONL format correctly (one JSON object per line)
-  - [ ] Identifies `result` events and extracts `usage` fields
-  - [ ] Handles nested subagent sessions (Task tool dispatches within a session)
-  - [ ] Returns dict with `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`
+  - [x] Parses JSONL format correctly (one JSON object per line)
+  - [x] Identifies `result` events and extracts `usage` fields
+  - [x] Handles nested subagent sessions (Task tool dispatches within a session)
+  - [x] Returns dict with `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`
 
-- [ ] **4.1.2** Integrate JSONL token parsing into `BuildStats`. After each pipeline stage completes, locate the session JSONL file and parse it for accurate totals. Update the dashboard to distinguish between phase owner tokens and subagent tokens
+- [x] **4.1.2** Integrate JSONL token parsing into `BuildStats`. After each pipeline stage completes, locate the session JSONL file and parse it for accurate totals. Update the dashboard to distinguish between phase owner tokens and subagent tokens
   - **Produces**: Updated `BuildStats` with accurate token counts including subagent usage
   - **Consumed by**: `print_summary()` dashboard display
   - **Replaces**: Current underreporting of subagent tokens
-  - [ ] Session JSONL path discoverable from Claude CLI conventions (`~/.claude/projects/{hash}/{session}.jsonl`)
-  - [ ] Token counts in dashboard include subagent usage
-  - [ ] Cost calculation remains accurate with new token source
+  - [x] Session JSONL path discoverable from Claude CLI conventions (`~/.claude/projects/{hash}/{session}.jsonl`)
+  - [x] Token counts in dashboard include subagent usage
+  - [x] Cost calculation remains accurate with new token source
 
 ---
 

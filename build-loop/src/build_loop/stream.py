@@ -88,14 +88,25 @@ def process_stream_event(
                     stats.add_tool_call(tool_name)
 
     elif event_type == "system":
-        # System event fires at session start — capture model for cost calc
+        # System event fires at session start — capture model
+        # and session ID for JSONL transcript lookup
         if stats and not stats.model:
             model = event.get("model", "")
             if not model:
                 # Some formats nest under subtype=init
-                model = event.get("session", {}).get("model", "")
+                session_obj = event.get("session", {})
+                model = session_obj.get("model", "")
             if model:
                 stats.model = model
+
+        if stats and not stats.session_id:
+            sid = event.get("sessionId", "")
+            if not sid:
+                sid = event.get(
+                    "session", {}
+                ).get("sessionId", "")
+            if sid:
+                stats.session_id = sid
 
     elif event_type == "result":
         # Result event fires once at end of session with authoritative
