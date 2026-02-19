@@ -52,47 +52,47 @@ Replace per-task fresh-session build model with phase owners that dispatch paral
 
 ### Phase 1: Phase Owner Build Prompt
 
-#### [1.1] Rewrite build.md as phase owner prompt
-- [ ] **1.1.1** Design the context gathering section of the phase owner prompt. Agent reads progress file, context files, tasks file, and identifies the current phase (first phase with incomplete `[ ]` parent tasks). Also checks for review fixes and remediation files (same as current prompt Steps 1.4 and 1.5)
+#### [x] [1.1] Rewrite build.md as phase owner prompt
+- [x] **1.1.1** Design the context gathering section of the phase owner prompt. Agent reads progress file, context files, tasks file, and identifies the current phase (first phase with incomplete `[ ]` parent tasks). Also checks for review fixes and remediation files (same as current prompt Steps 1.4 and 1.5)
   - **Produces**: Phase owner's internal understanding of current state + current phase identification
   - **Consumed by**: Wave planning section (1.1.2) uses phase identification to extract tasks
   - **Replaces**: Current build.md Steps 1-2 (context gathering + task selection)
-  - [ ] Agent reads all context docs exactly once per session
-  - [ ] Current phase identified correctly (first phase with incomplete tasks)
-  - [ ] Review fixes and remediation files handled identically to current behavior
+  - [x] Agent reads all context docs exactly once per session
+  - [x] Current phase identified correctly (first phase with incomplete tasks)
+  - [x] Review fixes and remediation files handled identically to current behavior
 
-- [ ] **1.1.2** Design the wave planning section. Phase owner extracts all parent tasks in the current phase, groups them into parallelizable waves using the task doc's wave/execution structure, and validates that tasks within each wave don't share file scopes
+- [x] **1.1.2** Design the wave planning section. Phase owner extracts all parent tasks in the current phase, groups them into parallelizable waves using the task doc's wave/execution structure, and validates that tasks within each wave don't share file scopes
   - **Produces**: Ordered list of waves, each containing task IDs + descriptions + file scope estimates
   - **Consumed by**: Subagent dispatch section (1.1.3) uses waves to construct Task tool calls
   - **Replaces**: Current build.md Step 2 (single task selection — now selects entire phase)
-  - [ ] Tasks grouped into waves matching task doc's execution strategy structure
-  - [ ] Phase owner validates no file conflicts within a wave before dispatch
+  - [x] Tasks grouped into waves matching task doc's execution strategy structure
+  - [x] Phase owner validates no file conflicts within a wave before dispatch
 
-- [ ] **1.1.3** Design the subagent dispatch section. For each task in a wave, phase owner constructs a Task tool call with: task description (full text), relevant context snippets extracted from docs, build progress file path, and dynamic instructions (TDD via `@skill-spectre:spectre-tdd`, commit format, completion report template). All tasks in a wave dispatched in a single message
+- [x] **1.1.3** Design the subagent dispatch section. For each task in a wave, phase owner constructs a Task tool call with: task description (full text), relevant context snippets extracted from docs, build progress file path, and dynamic instructions (TDD via `@skill-spectre:spectre-tdd`, commit format, completion report template). All tasks in a wave dispatched in a single message
   - **Produces**: Parallel Task tool calls dispatching subagents; subagents return completion reports
   - **Consumed by**: Aggregation section (1.1.4) reads completion reports
   - **Replaces**: Current build.md Steps 3-4 (task execution + verification — now done by subagents)
-  - [ ] Dynamic prompt includes task description, context snippets, progress path, and TDD instructions
-  - [ ] All tasks in wave dispatched simultaneously (single message, multiple Task tool calls)
-  - [ ] Subagent prompt includes completion report template (files changed, scope signal, discoveries, guidance)
-  - [ ] Subagent instructed to commit independently with `feat({task_id}): {description}` format
+  - [x] Dynamic prompt includes task description, context snippets, progress path, and TDD instructions
+  - [x] All tasks in wave dispatched simultaneously (single message, multiple Task tool calls)
+  - [x] Subagent prompt includes completion report template (files changed, scope signal, discoveries, guidance)
+  - [x] Subagent instructed to commit independently with `feat({task_id}): {description}` format
 
-- [ ] **1.1.4** Design the aggregation and adaptive planning section. Phase owner reads all completion reports from the wave, reviews scope signals (⚪/🟡/🟠/🔴), marks tasks `[x]` in tasks file, adapts remaining waves if signals indicate issues, updates build progress with phase-level summary
+- [x] **1.1.4** Design the aggregation and adaptive planning section. Phase owner reads all completion reports from the wave, reviews scope signals (⚪/🟡/🟠/🔴), marks tasks `[x]` in tasks file, adapts remaining waves if signals indicate issues, updates build progress with phase-level summary
   - **Produces**: Updated tasks file, updated progress file, adapted wave plan (if needed)
   - **Consumed by**: Next wave dispatch (loop back to 1.1.3) or completion section (1.1.5)
   - **Replaces**: Current build.md Step 5 (progress update — now aggregates from multiple subagents)
-  - [ ] Scope signals reviewed: ⚪ continue, 🟡 minor adapt, 🟠 significant adapt, 🔴 stop and re-evaluate
-  - [ ] Tasks marked `[x]` in tasks file after subagent completion
-  - [ ] Build progress updated with phase-level summary (not per-task like current)
+  - [x] Scope signals reviewed: ⚪ continue, 🟡 minor adapt, 🟠 significant adapt, 🔴 stop and re-evaluate
+  - [x] Tasks marked `[x]` in tasks file after subagent completion
+  - [x] Build progress updated with phase-level summary (not per-task like current)
 
-- [ ] **1.1.5** Design the completion section. Phase owner emits `PHASE_COMPLETE` or `BUILD_COMPLETE` with enhanced artifact JSON including `phase_completed`, `completed_phase_tasks`, `remaining_phases`, `phase_task_descriptions`, and `files_touched`. Promise integrity rules preserved
+- [x] **1.1.5** Design the completion section. Phase owner emits `PHASE_COMPLETE` or `BUILD_COMPLETE` with enhanced artifact JSON including `phase_completed`, `completed_phase_tasks`, `remaining_phases`, `phase_task_descriptions`, and `files_touched`. Promise integrity rules preserved
   - **Produces**: Promise tag + enhanced artifact JSON block
   - **Consumed by**: `PromiseCompletion(extract_artifacts=True)` in pipeline; `context.update(result.artifacts)` propagates to code review
   - **Replaces**: Current build.md Step 6 (STOP section — enhanced with new artifact fields)
-  - [ ] JSON block includes `phase_task_descriptions` (full text of completed tasks for code review)
-  - [ ] JSON block includes `files_touched` (list of all files changed by subagents)
-  - [ ] Promise tag emitted correctly: PHASE_COMPLETE if more phases, BUILD_COMPLETE if last phase
-  - [ ] Phase metadata compatible with downstream code review and validate stages
+  - [x] JSON block includes `phase_task_descriptions` (full text of completed tasks for code review)
+  - [x] JSON block includes `files_touched` (list of all files changed by subagents)
+  - [x] Promise tag emitted correctly: PHASE_COMPLETE if more phases, BUILD_COMPLETE if last phase
+  - [x] Phase metadata compatible with downstream code review and validate stages
 
 ### Phase 2: Pipeline Config & Code Review Updates
 
