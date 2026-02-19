@@ -1,26 +1,26 @@
 ---
-name: feature-plan-pipeline
-description: Use when modifying the planning pipeline, debugging plan stages, changing clarification flow, or understanding how spectre-build --plan works end-to-end
+name: feature-plan-loop
+description: Use when modifying the plan loop, debugging plan stages, changing clarification flow, scope isolation, or understanding how spectre-build --plan works end-to-end
 user-invocable: false
 ---
 
-# Planning Pipeline (--plan)
+# Plan Loop (--plan)
 
-**Trigger**: plan pipeline, --plan, planning loop, plan stages, clarifications, plan resume, scope to manifest
+**Trigger**: plan loop, --plan, plan pipeline, planning loop, --scope-name, plan stages, clarifications, plan resume, scope to manifest, scope isolation, scope slug, run_plan_pipeline, create_plan_pipeline
 **Confidence**: high
 **Created**: 2026-02-17
-**Updated**: 2026-02-17
-**Version**: 1
+**Updated**: 2026-02-18
+**Version**: 2
 
-## What is the Planning Pipeline?
+## What is the Plan Loop?
 
-The `--plan` flag on `spectre-build` runs a multi-stage autonomous planning pipeline that transforms scope documents into a build-ready manifest. It decomposes the interactive `/spectre:plan` workflow into 7 independent stages — each reading and writing files — leveraging the existing pipeline executor with zero changes to the core engine.
+The `--plan` flag on `spectre-build` runs a multi-stage autonomous planning loop that transforms scope documents into a build-ready manifest. It decomposes the interactive `/spectre:plan` workflow into 7 independent stages — each reading and writing files — leveraging the existing pipeline executor with zero changes to the core engine.
 
 **Key insight**: The plan loop does NOT use `--tasks` (tasks are *generated*, not provided). It takes `--context` scope docs as input and produces a `.md` manifest with YAML frontmatter as output.
 
 ## Why Use It?
 
-| Problem | How Plan Pipeline Solves It |
+| Problem | How Plan Loop Solves It |
 |---------|---------------------------|
 | 20-40 min manual planning orchestration before builds | Runs autonomously from scope docs to build manifest |
 | Manual multi-step `/spectre:*` command sequencing | 7 stages execute in sequence, file-mediated |

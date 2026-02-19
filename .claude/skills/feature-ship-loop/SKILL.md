@@ -1,20 +1,20 @@
 ---
-name: feature-ship-pipeline
-description: Use when modifying the ship pipeline, debugging ship stages, changing clean/test/rebase behavior, or understanding how spectre-build --ship works end-to-end
+name: feature-ship-loop
+description: Use when modifying the ship loop, debugging ship stages, changing clean/test/rebase behavior, or understanding how spectre-build --ship works end-to-end
 user-invocable: false
 ---
 
-# Ship Pipeline (--ship)
+# Ship Loop (--ship)
 
-**Trigger**: ship pipeline, --ship, ship loop, clean stage, test stage, rebase stage, land branch, run_ship_pipeline, create_ship_pipeline, ship hooks, notify_ship_complete
+**Trigger**: ship loop, --ship, ship pipeline, clean stage, test stage, rebase stage, land branch, run_ship_pipeline, create_ship_pipeline, ship hooks, notify_ship_complete, clean_discover, clean_investigate, clean_execute, test_plan, test_execute, test_verify, test_commit, sub-stage, subagent dispatch
 **Confidence**: high
 **Created**: 2026-02-18
 **Updated**: 2026-02-18
-**Version**: 2
+**Version**: 3
 
-## What is the Ship Pipeline?
+## What is the Ship Loop?
 
-The `--ship` flag on `spectre-build` runs an 8-stage autonomous pipeline that takes a feature branch from "works on branch" to "landed on main" without human babysitting. It automates the manual ceremony of running `/spectre:clean`, `/spectre:test`, and `/spectre:rebase` in sequence.
+The `--ship` flag on `spectre-build` runs an 8-stage autonomous loop that takes a feature branch from "works on branch" to "landed on main" without human babysitting. It automates the manual ceremony of running `/spectre:clean`, `/spectre:test`, and `/spectre:rebase` in sequence.
 
 The 8 stages are organized into three logical groups:
 - **Clean group** (3 stages): clean_discover → clean_investigate → clean_execute
@@ -25,7 +25,7 @@ The 8 stages are organized into three logical groups:
 
 ## Why Use It?
 
-| Problem | How Ship Pipeline Solves It |
+| Problem | How Ship Loop Solves It |
 |---------|---------------------------|
 | 3 manual `/spectre:*` commands with babysitting between each | Runs autonomously: clean → test → rebase in one invocation |
 | Dead code and duplication accumulate on feature branches | Clean group systematically discovers, investigates (with parallel subagents), and removes dead code/duplication |

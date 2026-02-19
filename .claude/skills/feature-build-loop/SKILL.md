@@ -145,7 +145,12 @@ Called in `run()` immediately before/after `stage.run()`. Errors caught and logg
 - `BuildStats` has `build_loops`, `review_loops`, `validate_loops` fields
 - Incremented via `on_event` callback listening for `StageCompletedEvent`
 - Dashboard shows `LOOPS B:3 R:2 V:1` line between COMMITS and TOKENS
-- Token/cost tracking unchanged (result events, model-specific pricing)
+- Token/cost tracking from `result` events, model-specific pricing in `_MODEL_PRICING`
+- **Stats persistence**: `to_dict()`/`from_dict()`/`merge()` methods on BuildStats
+- Stats saved to `.spectre/build-stats.json` at each stage boundary via `save_stats()`
+- On resume, previous stats loaded via `load_stats()` and merged into fresh stats
+- Stats file cleared on successful pipeline completion via `clear_stats()`
+- `[🪳 TEMP STATS]` debug logging in stream.py and stats.py for token count diagnosis
 
 ### Tool Filtering
 **Allowed**: Bash, Read, Write, Edit, Glob, Grep, LS, TodoRead, TodoWrite, Skill
@@ -215,4 +220,6 @@ Edit `build-loop/src/build_loop/prompts/build.md`. Variables available:
 - **Phase headers are optional**: If tasks file has no `## Phase N:` headers, PHASE_COMPLETE is never emitted.
 - **Legacy path still exists**: `run_build_validate_cycle()` is used for non-validate builds. Don't break it.
 - **Hooks are error-safe**: before/after stage hooks catch exceptions and log warnings, never crash the pipeline.
-- **Model pricing is hardcoded in stats.py**: Will need updating when Anthropic changes prices.
+- **Model pricing is hardcoded in stats.py**: Updated 2026-02-18 for Opus 4.5+/Sonnet 4.5+/Haiku 4.5 pricing. Will need updating when Anthropic changes prices.
+- **Subagent tokens are invisible**: Task tool dispatches (e.g., clean_investigate, test_execute) create nested Claude sessions whose tokens don't flow through the parent stream parser. Stats undercount when subagents are active.
+- **Stats persist across resume**: Stats saved to `.spectre/build-stats.json` at stage boundaries. Merged on resume. Cleared on successful completion.
