@@ -1,120 +1,85 @@
-# Validation Gaps — Ship Loop (`--ship`)
+# Validation Gaps — Phase 7: Update Tests
 *Generated: 2026-02-18*
 
 ## Summary
 - **Overall Status**: Complete
-- **Requirements**: 30 of 30 delivered
+- **Requirements**: 16 of 16 delivered
 - **Gaps Found**: 0 requiring remediation
 
-All 30 requirements across 4 phases (12 parent tasks, 14 sub-tasks) have been validated as Delivered — Defined AND Connected AND Reachable from user action.
+All test updates for the 8-stage ship pipeline are fully delivered — pipeline factory tests, hook tests, integration tests, prompt content tests, and CLI/stats tests.
 
 ---
 
 ## Gap Remediation Tasks
 
-No gaps found. All tasks are fully delivered, connected, and reachable.
+No gaps found. All tasks are fully delivered.
 
 ---
 
 ## Validation Coverage
 
-| Area | Task | Status | Definition | Usage |
-|------|------|--------|------------|-------|
-| CLI Flag & Routing | 1.1 | ✅ | cli.py:238-242 | cli.py:1294 (main), cli.py:1324 (interactive guard) |
-| Ship Pipeline Orchestration | 1.2 | ✅ | cli.py:859-949 | cli.py:1304 (main), cli.py:1043 (resume), cli.py:1148 (manifest) |
-| Interactive Mode | 1.3 | ✅ | cli.py:356-368, cli.py:1365-1408 | cli.py:1325 (mode dispatch) |
-| Pipeline Factory | 2.1 | ✅ | loader.py:413-475 | cli.py:925 (run_ship_pipeline) |
-| Ship Hooks | 2.2 | ✅ | hooks.py:186-251 | cli.py:937-938 (PipelineExecutor wiring) |
-| Clean Prompt | 3.1 | ✅ | prompts/shipping/clean.md (7 tasks) | loader.py:430 (stage config) |
-| Test Prompt | 3.2 | ✅ | prompts/shipping/test.md (4 tasks) | loader.py:444 (stage config) |
-| Rebase Prompt | 3.3 | ✅ | prompts/shipping/rebase.md (single window) | loader.py:458 (stage config) |
-| Session Persistence | 4.1 | ✅ | cli.py:42-43, cli.py:1032-1048, cli.py:97-101 | cli.py:1302 (save), cli.py:1032 (resume) |
-| Manifest Support | 4.2 | ✅ | manifest.py:21, cli.py:1143-1165 | cli.py:1143 (routing check) |
-| Stats Tracking | 4.3 | ✅ | stats.py:65, stats.py:245-262, stats.py:209-211 | cli.py:929 (handler), cli.py:935 (wiring) |
-| Notification | 4.4 | ✅ | notify.py:188-221 | cli.py:1314, cli.py:1084, cli.py:1158 |
-| No Core Engine Changes | REQ-030 | ✅ | N/A | executor.py, stage.py, completion.py, stream.py, agent.py untouched |
+| Area | Status | Definition | Usage |
+|------|--------|------------|-------|
+| [7.1] Pipeline Factory Tests | ✅ Delivered | `loader.py:411-559` (8 StageConfig defs) | `test_ship_pipeline.py:29-321` (8 test classes) |
+| [7.2] Hook Tests | ✅ Delivered | `hooks.py:186-252` (before/after stage) | `test_ship_hooks.py:25-202` (snapshot/capture/no-op tests) |
+| [7.3.1] Integration Tests | ✅ Delivered | `cli.py` (run_ship_pipeline) | `test_run_ship_pipeline.py:12-200` (happy/resume/failure) |
+| [7.3.2] Prompt Content Tests | ✅ Delivered | 7 new prompts in `prompts/shipping/` | 7 test files (109 total test methods) |
+| [7.3.3] CLI/Stats Tests | ✅ Delivered | `test_ship_cli.py`, `test_ship_stats.py` | New 8-stage names throughout |
 
 ---
 
-## Reachability Traces
+## Detailed Validation
 
-### Trace 1: `spectre-build --ship`
-```
-User: spectre-build --ship
-→ main() [cli.py:1222]
-→ parse_args() → args.ship=True [cli.py:1226]
-→ args.ship check [cli.py:1294]
-→ context_files resolved (optional) [cli.py:1295-1296]
-→ save_session(..., ship=True) [cli.py:1302]
-→ run_ship_pipeline(context_files, max_iterations, agent) [cli.py:1304-1308]
-  → _detect_parent_branch() [cli.py:901] → fail fast if None [cli.py:902-905]
-  → working_set_scope = f"{parent_branch}..HEAD" [cli.py:908]
-  → create_ship_pipeline() [cli.py:925] → PipelineConfig(name="ship", stages={clean,test,rebase})
-  → create_ship_event_handler(stats) [cli.py:929]
-  → PipelineExecutor(config, runner, on_event, context, ship_before_stage, ship_after_stage) [cli.py:932-939]
-  → executor.run(stats) [cli.py:941]
-    → Stage "clean" → 7 tasks via clean.md → CLEAN_TASK_COMPLETE/CLEAN_COMPLETE
-    → ship_after_stage("clean") → context["clean_summary"] set
-    → Stage "test" → 4 tasks via test.md → TEST_TASK_COMPLETE/TEST_COMPLETE
-    → ship_after_stage("test") → context["test_summary"] set
-    → Stage "rebase" → rebase.md → SHIP_COMPLETE → pipeline ends
-→ notify_ship_complete() [cli.py:1314-1319]
-→ sys.exit(exit_code) [cli.py:1321]
-```
+### [7.1] Pipeline Factory Tests (5/5 requirements)
 
-### Trace 2: `spectre-build` (interactive ship)
-```
-User: spectre-build (no flags)
-→ main() → prompt_for_mode() [cli.py:1325]
-→ User selects "ship" → mode == "ship" [cli.py:1365]
-→ prompt_for_context_files() (optional) [cli.py:1366]
-→ _detect_parent_branch() [cli.py:1373] → fail fast if None
-→ Display parent branch, confirm [cli.py:1380-1385]
-→ save_session(..., ship=True) [cli.py:1389]
-→ run_ship_pipeline() [cli.py:1391-1395]
-→ notify_ship_complete() [cli.py:1400-1406]
-→ sys.exit(exit_code) [cli.py:1408]
-```
+| # | Requirement | Status | Evidence |
+|---|-----------|--------|---------|
+| 1 | 8 stages with correct names | ✅ | `test_ship_pipeline.py:29-34` — asserts `len==8`, validates all names |
+| 2 | start_stage="clean_discover" | ✅ | `test_ship_pipeline.py:36-40` — asserts match |
+| 3 | Transition chain validated | ✅ | `test_ship_pipeline.py:67-151` — 8 individual + full chain test |
+| 4 | Completion signals validated | ✅ | `test_ship_pipeline.py:168-227` — 8 signal validation tests |
+| 5 | Task not in denied_tools | ✅ | `test_ship_pipeline.py:55-61` — iterates all stages |
 
-### Trace 3: `spectre-build resume` (ship session)
-```
-User: spectre-build resume
-→ run_resume(args) [cli.py:974]
-→ load_session() → session.get("ship") == True [cli.py:1032]
-→ save_session(..., ship=True, ship_context=...) [cli.py:1034-1041]
-→ run_ship_pipeline(resume_context=session.get("ship_context")) [cli.py:1043-1048]
-  → resume_context path → skips _detect_parent_branch() [cli.py:897-898]
-→ notify_ship_complete() [cli.py:1084-1089]
-→ sys.exit(exit_code) [cli.py:1105]
-```
+### [7.2] Hook Tests (6/6 requirements)
 
-### Trace 4: `spectre-build ship.md` (manifest)
-```
-User: spectre-build ship.md
-→ main() → positional.endswith(".md") → run_manifest() [cli.py:1242-1244]
-→ load_manifest("ship.md") → manifest.ship=True [manifest.py:171]
-→ manifest.ship check [cli.py:1143] → before validate check [cli.py:1175]
-→ save_session(..., ship=True, manifest_path=...) [cli.py:1145-1146]
-→ run_ship_pipeline() [cli.py:1148-1152]
-→ notify_ship_complete() [cli.py:1158-1163]
-→ sys.exit(exit_code) [cli.py:1165]
-```
+| # | Requirement | Status | Evidence |
+|---|-----------|--------|---------|
+| 1 | before_stage("clean_discover") snapshots HEAD | ✅ | `test_ship_hooks.py:25-37` — happy + failure paths |
+| 2 | before_stage("test_plan") snapshots HEAD | ✅ | `test_ship_hooks.py:43-55` — happy + failure paths |
+| 3 | before_stage no-ops (6 stages) | ✅ | `test_ship_hooks.py:61-76` — parametrized over all non-snapshot stages |
+| 4 | after_stage("clean_execute") captures clean_summary | ✅ | `test_ship_hooks.py:93-130` — happy + missing commit + diff failure |
+| 5 | after_stage("test_commit") captures test_summary | ✅ | `test_ship_hooks.py:136-173` — happy + diff failure + missing commit |
+| 6 | after_stage no-ops (6 stages) | ✅ | `test_ship_hooks.py:179-195` — parametrized over all non-capture stages |
+
+### [7.3.1] Integration Tests (3/3 requirements)
+
+| # | Requirement | Status | Evidence |
+|---|-----------|--------|---------|
+| 1 | Happy path test with 8-stage factory | ✅ | `test_run_ship_pipeline.py:12-70` — mocks create_ship_pipeline, verifies hooks/context/exit |
+| 2 | Resume test | ✅ | `test_run_ship_pipeline.py:95-140` — passes resume_context, verifies usage |
+| 3 | Failure path tests | ✅ | `test_run_ship_pipeline.py:75-200` — git failure (1), agent unavailable (127), stopped (130) |
+
+### [7.3.2] Prompt Content Tests (7/7 prompts covered)
+
+| Prompt File | Test File | Template Vars | Signals | Subagent Dispatch |
+|-------------|-----------|---------------|---------|-------------------|
+| clean_discover.md | test_clean_discover_prompt.py | ✅ (lines 15-20) | ✅ (lines 32-42) | N/A |
+| clean_investigate.md | test_clean_investigate_prompt.py | ✅ (lines 17-22) | ✅ (lines 46-54) | ✅ (4 tests, lines 64-93) |
+| clean_execute.md | test_clean_execute_prompt.py | ✅ (lines 17-22) | ✅ (lines 56-64) | N/A |
+| test_plan.md | test_test_plan_prompt.py | ✅ (lines 15-19) | ✅ (lines 30-39) | N/A |
+| test_execute.md | test_test_execute_prompt.py | ✅ (lines 17-21) | ✅ (lines 45-54) | ✅ (7 tests, lines 62-112) |
+| test_verify.md | test_test_verify_prompt.py | ✅ (lines 17-21) | ✅ (lines 54-72) | N/A |
+| test_commit.md | test_test_commit_prompt.py | ✅ (lines 17-21) | ✅ (lines 57-77) | N/A |
+
+### [7.3.3] CLI/Stats Tests Updated (2/2 requirements)
+
+| # | Requirement | Status | Evidence |
+|---|-----------|--------|---------|
+| 1 | test_ship_cli.py uses new patterns | ✅ | `test_ship_cli.py:1-109` — no old stage names |
+| 2 | test_ship_stats.py uses new stage names | ✅ | `test_ship_stats.py:65-72` — all 8 new stage names explicit |
+
+---
 
 ## Scope Creep
 
-None detected. All changes are scoped to ship loop requirements. The only file outside the core ship implementation that was modified is `pipeline/__init__.py` (added `create_ship_pipeline` to the package's public exports), which is the expected pattern.
-
-## Files Changed (12 implementation files + tests)
-
-| File | Changes |
-|------|---------|
-| `cli.py` | `--ship` flag, `run_ship_pipeline()`, `_detect_parent_branch()`, ship routing in `main()`, `run_resume()`, `run_manifest()`, ship in `prompt_for_mode()`, ship fields in `save_session()`, ship display in `format_session_summary()` |
-| `pipeline/loader.py` | `create_ship_pipeline()` factory with 3 stages |
-| `pipeline/__init__.py` | Export `create_ship_pipeline` |
-| `hooks.py` | `ship_before_stage()`, `ship_after_stage()`, `_collect_stage_summary()` |
-| `stats.py` | `ship_loops` field, `create_ship_event_handler()`, `print_summary()` ship display |
-| `notify.py` | `notify_ship_complete()` |
-| `manifest.py` | `ship: bool = False` field in `BuildManifest`, parsed from frontmatter |
-| `prompts/shipping/clean.md` | 7-task clean stage prompt |
-| `prompts/shipping/test.md` | 4-task test stage prompt |
-| `prompts/shipping/rebase.md` | Single-context-window rebase prompt with PR/merge landing |
+None detected. Additional test coverage beyond minimum requirements (iteration limits, prompt paths, JSON completion strategies) is beneficial and not harmful.
