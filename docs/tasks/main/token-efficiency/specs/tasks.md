@@ -96,20 +96,20 @@ Replace per-task fresh-session build model with phase owners that dispatch paral
 
 ### Phase 2: Pipeline Config & Code Review Updates
 
-#### [2.1] Update pipeline config in create_default_pipeline()
-- [ ] **2.1.1** Remove the `"TASK_COMPLETE": "build"` transition from the build stage config in `create_default_pipeline()`. Phase owner handles all task iteration internally and only emits PHASE_COMPLETE or BUILD_COMPLETE
+#### [x] [2.1] Update pipeline config in create_default_pipeline()
+- [x] **2.1.1** Remove the `"TASK_COMPLETE": "build"` transition from the build stage config in `create_default_pipeline()`. Phase owner handles all task iteration internally and only emits PHASE_COMPLETE or BUILD_COMPLETE
   - **Produces**: Updated transitions dict with only `PHASE_COMPLETE → code_review` and `BUILD_COMPLETE → code_review`
   - **Consumed by**: `PipelineExecutor.run()` uses transitions to route between stages
   - **Replaces**: Current TASK_COMPLETE → build loopback (dead code with phase owner)
-  - [ ] `create_default_pipeline()` build stage transitions: only PHASE_COMPLETE and BUILD_COMPLETE
-  - [ ] Legacy `create_default_build_validate_pipeline()` left unchanged (backward compat)
+  - [x] `create_default_pipeline()` build stage transitions: only PHASE_COMPLETE and BUILD_COMPLETE
+  - [x] Legacy `create_default_build_validate_pipeline()` left unchanged (backward compat)
 
-- [ ] **2.1.2** Adjust `max_iterations` default for the build stage. With phase owner, each iteration covers a full phase (not a single task). Change default from 10 to a lower value (e.g., 5) since builds rarely exceed 5 phases. The `max_build_iterations` parameter still allows override
+- [x] **2.1.2** Adjust `max_iterations` default for the build stage. With phase owner, each iteration covers a full phase (not a single task). Change default from 10 to a lower value (e.g., 5) since builds rarely exceed 5 phases. The `max_build_iterations` parameter still allows override
   - **Produces**: Updated `max_iterations` value in build StageConfig
   - **Consumed by**: `Stage.run()` loop uses max_iterations as safety cap
   - **Replaces**: Current max_iterations=10 (designed for per-task iteration)
-  - [ ] Default max_iterations set appropriately for phase-level iteration
-  - [ ] `max_build_iterations` parameter in `create_default_pipeline()` still allows caller override
+  - [x] Default max_iterations set appropriately for phase-level iteration
+  - [x] `max_build_iterations` parameter in `create_default_pipeline()` still allows caller override
 
 #### [2.2] Update code review prompt for context isolation
 - [ ] **2.2.1** Remove full context variable references from `code_review.md`. Replace the Files section that currently references `{tasks_file_path}`, `{progress_file_path}`, and `{additional_context_paths_or_none}` with a reference to `{phase_task_descriptions}` only

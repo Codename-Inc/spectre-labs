@@ -234,7 +234,7 @@ def create_default_pipeline(
     build_prompt_path: str | None = None,
     code_review_prompt_path: str | None = None,
     validate_prompt_path: str | None = None,
-    max_build_iterations: int = 10,
+    max_build_iterations: int = 3,
 ) -> PipelineConfig:
     """Create a default build -> code_review -> validate pipeline.
 
@@ -263,12 +263,11 @@ def create_default_pipeline(
             name="build",
             prompt_template=build_prompt,
             completion=PromiseCompletion(
-                complete_signals=["TASK_COMPLETE", "PHASE_COMPLETE", "BUILD_COMPLETE"],
+                complete_signals=["PHASE_COMPLETE", "BUILD_COMPLETE"],
                 extract_artifacts=True,
             ),
             max_iterations=max_build_iterations,
             transitions={
-                "TASK_COMPLETE": "build",
                 "PHASE_COMPLETE": "code_review",
                 "BUILD_COMPLETE": "code_review",
             },
