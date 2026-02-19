@@ -258,11 +258,11 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
   - [x] Denied tools test confirms Task is NOT in any stage's denied_tools
 
 #### [7.2] Update Hook Tests
-- [ ] **7.2.1** Update `build-loop/tests/test_ship_hooks.py` for new sub-stage names: `before_stage("clean_discover")` snapshots HEAD, `before_stage("clean_investigate")` is no-op, `after_stage("clean_execute")` captures `clean_summary`, `after_stage("test_commit")` captures `test_summary`
+- [x] **7.2.1** Update `build-loop/tests/test_ship_hooks.py` for new sub-stage names: `before_stage("clean_discover")` snapshots HEAD, `before_stage("clean_investigate")` is no-op, `after_stage("clean_execute")` captures `clean_summary`, `after_stage("test_commit")` captures `test_summary`
   - **Produces**: Passing hook tests for new sub-stage names
   - **Consumed by**: CI, `pytest tests/ -k ship_hooks`
   - **Replaces**: Previous hook tests that matched `"clean"` and `"test"`
-  - [ ] Tests pass for all 8 sub-stage name permutations in before/after hooks
+  - [x] Tests pass for all 8 sub-stage name permutations in before/after hooks
 
 #### [7.3] Update Integration and Prompt Tests
 - [ ] **7.3.1** Update `build-loop/tests/test_run_ship_pipeline.py` to work with the new 8-stage `create_ship_pipeline()` factory
