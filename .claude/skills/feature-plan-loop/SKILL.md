@@ -9,8 +9,8 @@ user-invocable: false
 **Trigger**: plan loop, --plan, plan pipeline, planning loop, --scope-name, plan stages, clarifications, plan resume, scope to manifest, scope isolation, scope slug, run_plan_pipeline, create_plan_pipeline
 **Confidence**: high
 **Created**: 2026-02-17
-**Updated**: 2026-02-18
-**Version**: 2
+**Updated**: 2026-02-19
+**Version**: 3
 
 ## What is the Plan Loop?
 
@@ -169,6 +169,7 @@ save_session(
     plan_context=context,                       # Full context dict for resume
     plan_clarifications_path=clarif_path,       # Path to clarifications file
     plan_scope_name=scope_name,                 # Scope slug for directory isolation
+    plan_auto_build=auto_build,                 # Chain to build after plan completes
     ...
 )
 ```
@@ -242,3 +243,5 @@ Trace: `req_validate` emits `CLARIFICATIONS_NEEDED` → `plan_after_stage()` sto
 - **Research stage tool filtering differs**: Only stage that allows WebSearch/WebFetch. Defined by `PLAN_RESEARCH_DENIED_TOOLS` vs `PLAN_DENIED_TOOLS`.
 - **All stages max_iterations=1**: Each planning stage runs once. No looping within stages.
 - **Artifacts flow via executor**: `context.update(result.artifacts)` happens automatically in executor after each stage. Hooks handle edge cases (defaults, file reading).
+- **Executor copies context dict**: `executor.run()` creates `dict(self.initial_context)` — a copy. Hook mutations to context during pipeline execution don't propagate back to the caller's original dict. For values that must survive session save (like `clarifications_path`), the caller must sync them from `state.global_artifacts` after `executor.run()` returns.
+- **`plan_auto_build` persists across resume**: The auto-build preference (from `--build` flag or interactive "Auto-start build?" prompt) is saved to session as `plan_auto_build` and checked in `run_resume()` to chain to `run_manifest()` after plan completes.

@@ -10,6 +10,10 @@ from .stats import BuildStats
 
 logger = logging.getLogger(__name__)
 
+# Track pending tool_use calls by ID for correlating with tool_results.
+# Cleared on each new session (system event).
+_pending_tools: dict[str, dict] = {}
+
 
 def format_tool_call(name: str, input_data: dict) -> str:
     """Format a tool call for display."""
@@ -43,8 +47,34 @@ def format_tool_call(name: str, input_data: dict) -> str:
         return f"🔎 Grep: {pattern}"
     elif name == "TodoWrite":
         return "📋 TodoWrite"
+    elif name == "Task":
+        subagent = input_data.get("subagent_type", "?")
+        desc = input_data.get("description", "")
+        bg = " [bg]" if input_data.get("run_in_background") else ""
+        if desc:
+            return f"🚀 Task({subagent}){bg}: {desc}"
+        return f"🚀 Task({subagent}){bg}"
+    elif name == "Skill":
+        skill = input_data.get("skill", "?")
+        return f"📚 Skill: {skill}"
     else:
         return f"🔧 {name}"
+
+
+def _extract_tool_result_text(content) -> str:
+    """Extract text from a tool_result content field.
+
+    Content can be a plain string or a list of content blocks.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                parts.append(block.get("text", ""))
+        return " ".join(parts)
+    return str(content) if content else ""
 
 
 def process_stream_event(
@@ -81,13 +111,49 @@ def process_stream_event(
             elif item_type == "tool_use":
                 tool_name = item.get("name", "?")
                 tool_input = item.get("input", {})
+                # Track pending tool calls for result correlation
+                tool_id = item.get("id")
+                if tool_id:
+                    _pending_tools[tool_id] = {
+                        "name": tool_name,
+                        "input": tool_input,
+                    }
                 formatted = format_tool_call(tool_name, tool_input)
                 print(formatted)
                 # Track tool call
                 if stats:
                     stats.add_tool_call(tool_name)
 
+    elif event_type == "user":
+        # Process tool_result events for errors and Task/Skill completions
+        message = event.get("message", {})
+        content = message.get("content", [])
+
+        for item in content:
+            if not isinstance(item, dict) or item.get("type") != "tool_result":
+                continue
+
+            tool_use_id = item.get("tool_use_id")
+            is_error = item.get("is_error", False)
+            pending = _pending_tools.pop(tool_use_id, None) if tool_use_id else None
+            tool_name = pending["name"] if pending else "unknown"
+
+            if is_error:
+                # Surface ALL tool errors — permission denials, failures, etc.
+                result_text = _extract_tool_result_text(item.get("content", ""))
+                if len(result_text) > 120:
+                    result_text = result_text[:117] + "..."
+                print(f"❌ {tool_name} error: {result_text}")
+            elif pending and pending["name"] == "Task":
+                # Show Task subagent completion
+                inp = pending.get("input", {})
+                subagent = inp.get("subagent_type", "?")
+                desc = inp.get("description", "")
+                print(f"✅ Task({subagent}) done: {desc}")
+
     elif event_type == "system":
+        # New session — clear pending tool tracking
+        _pending_tools.clear()
         # System event fires at session start — capture model
         # and session ID for JSONL transcript lookup
         if stats and not stats.model:
@@ -157,4 +223,4 @@ def process_stream_event(
                 stats.calculate_cost(),
             )
 
-    # Skip user and tool_result events (too noisy)
+    # Skip other event types (tool_result successes for non-Task tools are too noisy)

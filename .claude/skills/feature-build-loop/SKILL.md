@@ -9,8 +9,8 @@ user-invocable: false
 **Trigger**: build loop, spectre-build, build iteration, validation cycle, promise tags, build stats, code review, phase awareness
 **Confidence**: high
 **Created**: 2026-02-07
-**Updated**: 2026-02-08
-**Version**: 2
+**Updated**: 2026-02-18
+**Version**: 3
 
 ## What is Build Loop?
 
@@ -153,8 +153,8 @@ Called in `run()` immediately before/after `stage.run()`. Errors caught and logg
 - `[🪳 TEMP STATS]` debug logging in stream.py and stats.py for token count diagnosis
 
 ### Tool Filtering
-**Allowed**: Bash, Read, Write, Edit, Glob, Grep, LS, TodoRead, TodoWrite, Skill
-**Denied**: AskUserQuestion, WebFetch, WebSearch, Task, EnterPlanMode, NotebookEdit
+**Allowed**: Bash, Read, Write, Edit, Glob, Grep, LS, TodoRead, TodoWrite, Skill, Task
+**Denied**: AskUserQuestion, WebFetch, WebSearch, EnterPlanMode, NotebookEdit
 
 ### Validation Principle
 > "Definition != Connection != Reachability"

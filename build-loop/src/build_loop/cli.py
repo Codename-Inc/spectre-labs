@@ -64,6 +64,7 @@ def save_session(
     plan_context: dict | None = None,
     plan_clarifications_path: str | None = None,
     plan_scope_name: str | None = None,
+    plan_auto_build: bool = False,
     ship: bool = False,
     ship_context: dict | None = None,
 ) -> None:
@@ -88,6 +89,7 @@ def save_session(
         "plan_context": plan_context,
         "plan_clarifications_path": plan_clarifications_path,
         "plan_scope_name": plan_scope_name,
+        "plan_auto_build": plan_auto_build,
         "ship": ship,
         "ship_context": ship_context,
         "started_at": datetime.now(timezone.utc).isoformat(),
@@ -849,6 +851,7 @@ def run_plan_pipeline(
     scope_name: str | None = None,
     resume_stage: str | None = None,
     resume_context: dict | None = None,
+    auto_build: bool = False,
 ) -> tuple[int, int, str]:
     """Run the planning pipeline: scope docs → build-ready manifest.
 
@@ -975,6 +978,11 @@ def run_plan_pipeline(
             context.get("clarifications_path", ""),
         )
 
+        # Sync clarifications_path back into context so it survives session save.
+        # The executor copies the context dict, so after_stage hook mutations
+        # don't propagate to the original context passed from this function.
+        context["clarifications_path"] = clarif_path
+
         print(f"\n{'='*60}")
         print("📋 CLARIFICATIONS NEEDED")
         print(f"   Edit: {clarif_path}")
@@ -997,6 +1005,7 @@ def run_plan_pipeline(
             plan_context=context,
             plan_clarifications_path=clarif_path,
             plan_scope_name=scope_name or derive_scope_slug(context_files),
+            plan_auto_build=auto_build,
         )
 
         # Save stats for resume (clarifications pause, not final)
@@ -1205,6 +1214,12 @@ def run_resume(args: argparse.Namespace) -> None:
 
     # Handle planning session resume
     if session.get("plan"):
+        # Defensive: ensure clarifications_path is in resume context even if
+        # the original save missed it (Fix B — belt-and-suspenders with Fix A).
+        resume_ctx = session.get("plan_context")
+        if resume_ctx is not None and session.get("plan_clarifications_path"):
+            resume_ctx["clarifications_path"] = session["plan_clarifications_path"]
+
         # Update session timestamp for planning
         save_session(
             tasks_file="",
@@ -1213,7 +1228,7 @@ def run_resume(args: argparse.Namespace) -> None:
             agent=agent,
             plan=True,
             plan_output_dir=session.get("plan_output_dir"),
-            plan_context=session.get("plan_context"),
+            plan_context=resume_ctx,
             plan_clarifications_path=session.get("plan_clarifications_path"),
             plan_scope_name=session.get("plan_scope_name"),
         )
@@ -1225,8 +1240,15 @@ def run_resume(args: argparse.Namespace) -> None:
             output_dir=session.get("plan_output_dir"),
             scope_name=session.get("plan_scope_name"),
             resume_stage="update_docs",
-            resume_context=session.get("plan_context"),
+            resume_context=resume_ctx,
+            auto_build=session.get("plan_auto_build", False),
         )
+
+        # Chain to build if auto_build was set and plan succeeded with manifest
+        if exit_code == 0 and _manifest and session.get("plan_auto_build"):
+            print(f"\n🔗 Auto-starting build from manifest: {_manifest}\n")
+            run_manifest(_manifest, args)  # calls sys.exit internally
+
     elif session.get("ship"):
         # Update session timestamp for ship
         save_session(
@@ -1464,13 +1486,15 @@ def main() -> None:
         start_time = time.time()
 
         save_session("", context_files, max_iterations, agent=agent,
-                     plan=True, plan_scope_name=scope_name)
+                     plan=True, plan_scope_name=scope_name,
+                     plan_auto_build=args.build)
 
         exit_code, iterations_completed, manifest_path = run_plan_pipeline(
             context_files=context_files,
             max_iterations=max_iterations,
             agent=agent,
             scope_name=scope_name,
+            auto_build=args.build,
         )
 
         duration = time.time() - start_time
@@ -1533,17 +1557,24 @@ def main() -> None:
             scope_name = prompt_for_scope_name(context_files)
             max_iterations = prompt_for_max_iterations()
             agent = prompt_for_agent()
+
+            # Ask upfront whether to auto-chain to build
+            print("Auto-start build after planning? [y/N]: ", end="")
+            auto_build = input().strip().lower() in ("y", "yes")
+
             project_name = Path.cwd().name
             start_time = time.time()
 
             save_session("", context_files, max_iterations, agent=agent,
-                         plan=True, plan_scope_name=scope_name)
+                         plan=True, plan_scope_name=scope_name,
+                         plan_auto_build=auto_build)
 
             exit_code, iterations_completed, manifest_path = run_plan_pipeline(
                 context_files=context_files,
                 max_iterations=max_iterations,
                 agent=agent,
                 scope_name=scope_name,
+                auto_build=auto_build,
             )
 
             duration = time.time() - start_time
@@ -1557,12 +1588,10 @@ def main() -> None:
                     project=project_name,
                 )
 
-            # Prompt to chain to build if plan succeeded
-            if exit_code == 0 and manifest_path:
-                print("Start build now? [y/N]: ", end="")
-                if input().strip().lower() in ("y", "yes"):
-                    print(f"\n🔗 Starting build from manifest: {manifest_path}\n")
-                    run_manifest(manifest_path, args)  # calls sys.exit internally
+            # Chain to build if user opted in upfront and plan succeeded
+            if exit_code == 0 and manifest_path and auto_build:
+                print(f"\n🔗 Auto-starting build from manifest: {manifest_path}\n")
+                run_manifest(manifest_path, args)  # calls sys.exit internally
 
             sys.exit(exit_code)
 
