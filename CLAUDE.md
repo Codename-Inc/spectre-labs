@@ -93,7 +93,16 @@ build-loop/
     └── prompts/
         ├── build.md         # Build iteration (phase-aware)
         ├── code_review.md   # Code review with scope injection
-        └── validate.md      # Validation with D!=C!=R
+        ├── validate.md      # Validation with D!=C!=R
+        └── shipping/        # Ship pipeline prompts (8 sub-stages)
+            ├── clean_discover.md     # Scope + dead code + duplication analysis
+            ├── clean_investigate.md  # Parallel subagent investigation
+            ├── clean_execute.md      # Apply changes + lint compliance
+            ├── test_plan.md          # Risk assessment + batching strategy
+            ├── test_execute.md       # Parallel subagent test writing
+            ├── test_verify.md        # Run suite, fix failures, re-verify
+            ├── test_commit.md        # Stage and commit test files
+            └── rebase.md             # Rebase, conflicts, land via PR/merge
 ```
 
 ### Build Loop Module Dependencies
@@ -125,13 +134,20 @@ stream.py → stats.py (updates BuildStats during event processing)
 2. Simple build loop via `loop.py`, one task per iteration
 3. Promise tags control flow
 
-### Tool Filtering (loop.py)
+### Tool Filtering
 
-**Allowed**: Bash, Read, Write, Edit, Glob, Grep, LS, TodoRead, TodoWrite
+Two layers of tool filtering:
 
-**Denied**: AskUserQuestion, WebFetch, WebSearch, Task, Skill, EnterPlanMode, NotebookEdit
+**Global (agent.py — legacy loop.py path):**
+- **Allowed**: Bash, Read, Write, Edit, Glob, Grep, LS, TodoRead, TodoWrite, Skill, Task
+- **Denied**: AskUserQuestion, WebFetch, WebSearch, EnterPlanMode, NotebookEdit
 
-Denied tools are blocked to prevent the loop from hanging (network calls, interactive prompts) or spawning unpredictable subagents.
+**Per-Stage (loader.py — pipeline path):**
+- `StageConfig.denied_tools` is wired through `Stage.run_iteration()` → `AgentRunner.run_iteration()`, overriding the global deny list when set
+- `PLAN_DENIED_TOOLS`: AskUserQuestion, WebFetch, WebSearch, EnterPlanMode, NotebookEdit (used by most pipeline stages)
+- `PLAN_RESEARCH_DENIED_TOOLS`: AskUserQuestion, EnterPlanMode, NotebookEdit (research stages get web access)
+
+Denied tools are blocked to prevent the loop from hanging (network calls, interactive prompts). Task and Skill are allowed so stages can dispatch subagents for parallel work.
 
 ### Promise-Based Flow Control
 
@@ -187,10 +203,18 @@ Knowledge stored in `{{project_root}}/.claude/skills/` with registry at `sparks-
 | `build-loop/src/build_loop/stream.py` | Stream-JSON parsing, formatted output |
 | `build-loop/src/build_loop/notify.py` | macOS/cross-platform notifications |
 | `build-loop/src/build_loop/pipeline/executor.py` | PipelineExecutor with before/after hooks |
-| `build-loop/src/build_loop/pipeline/loader.py` | YAML loading, create_default_pipeline() |
+| `build-loop/src/build_loop/pipeline/loader.py` | YAML loading, create_default_pipeline(), create_ship_pipeline() |
 | `build-loop/src/build_loop/prompts/build.md` | Phase-aware build iteration prompt |
 | `build-loop/src/build_loop/prompts/code_review.md` | Code review with scope injection |
 | `build-loop/src/build_loop/prompts/validate.md` | Validation with D!=C!=R principle |
+| `build-loop/src/build_loop/prompts/shipping/clean_discover.md` | Ship: scope + dead code + duplication analysis |
+| `build-loop/src/build_loop/prompts/shipping/clean_investigate.md` | Ship: parallel subagent investigation of suspects |
+| `build-loop/src/build_loop/prompts/shipping/clean_execute.md` | Ship: apply approved changes + lint |
+| `build-loop/src/build_loop/prompts/shipping/test_plan.md` | Ship: risk assessment + batching strategy |
+| `build-loop/src/build_loop/prompts/shipping/test_execute.md` | Ship: parallel subagent test writing |
+| `build-loop/src/build_loop/prompts/shipping/test_verify.md` | Ship: run suite, fix failures |
+| `build-loop/src/build_loop/prompts/shipping/test_commit.md` | Ship: stage and commit test files |
+| `build-loop/src/build_loop/prompts/shipping/rebase.md` | Ship: rebase, conflicts, land via PR/merge |
 
 ## Constraints
 

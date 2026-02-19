@@ -291,22 +291,22 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
 ### Phase 8: Update Documentation and Knowledge
 
 #### [8.1] Update Project Documentation
-- [ ] **8.1.1** Update `CLAUDE.md` architecture section to reflect 8-stage ship pipeline, Task tool no longer denied, per-stage tool filtering active
+- [x] **8.1.1** Update `CLAUDE.md` architecture section to reflect 8-stage ship pipeline, Task tool no longer denied, per-stage tool filtering active
   - **Produces**: Accurate project documentation
   - **Consumed by**: Future development sessions
   - **Replaces**: Previous 3-stage ship pipeline docs, previous tool filtering docs
-  - [ ] Tool Filtering section updated: Task removed from denied lists
-  - [ ] Ship pipeline section shows 8 stages with transition chain
-  - [ ] New prompt files listed in Key Files table
-- [ ] **8.1.2** Update `.claude/skills/feature-ship-pipeline/SKILL.md` with new 8-stage architecture, new signal names, new hook behavior, subagent dispatch patterns
+  - [x] Tool Filtering section updated: Task removed from denied lists
+  - [x] Ship pipeline section shows 8 stages with transition chain
+  - [x] New prompt files listed in Key Files table
+- [x] **8.1.2** Update `.claude/skills/feature-ship-pipeline/SKILL.md` with new 8-stage architecture, new signal names, new hook behavior, subagent dispatch patterns
   - **Produces**: Accurate feature knowledge for future sessions
   - **Consumed by**: spectre-recall skill loading
   - **Replaces**: Previous 3-stage ship pipeline knowledge
-  - [ ] Stage config section shows 8 stages
-  - [ ] Transition chain updated
-  - [ ] Hook section updated for new sub-stage names
-  - [ ] Key Files table includes all 7 new prompt files
-  - [ ] Gotchas section updated
+  - [x] Stage config section shows 8 stages
+  - [x] Transition chain updated
+  - [x] Hook section updated for new sub-stage names
+  - [x] Key Files table includes all 7 new prompt files
+  - [x] Gotchas section updated
 
 ---
 
