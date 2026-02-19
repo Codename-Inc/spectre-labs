@@ -247,15 +247,15 @@ Unblock the Task tool across all pipelines, wire per-stage tool filtering, expan
 ### Phase 7: Update Tests
 
 #### [7.1] Update Pipeline Factory Tests
-- [ ] **7.1.1** Rewrite `build-loop/tests/test_ship_pipeline.py` for 8-stage ship pipeline: update expected stage count, stage names (`clean_discover`, `clean_investigate`, `clean_execute`, `test_plan`, `test_execute`, `test_verify`, `test_commit`, `rebase`), `start_stage="clean_discover"`, new signal names, new transition maps, `denied_tools` no longer contains Task
+- [x] **7.1.1** Rewrite `build-loop/tests/test_ship_pipeline.py` for 8-stage ship pipeline: update expected stage count, stage names (`clean_discover`, `clean_investigate`, `clean_execute`, `test_plan`, `test_execute`, `test_verify`, `test_commit`, `rebase`), `start_stage="clean_discover"`, new signal names, new transition maps, `denied_tools` no longer contains Task
   - **Produces**: Passing tests that validate the new 8-stage pipeline config
   - **Consumed by**: CI, `pytest tests/ -k ship`
   - **Replaces**: Previous 3-stage pipeline tests
-  - [ ] `test_returns_pipeline_config` asserts 8 stages with correct names
-  - [ ] `test_pipeline_name_and_start_stage` asserts `start_stage="clean_discover"`
-  - [ ] Transition tests validate full chain: clean_discover→...→rebase→(end)
-  - [ ] Completion status tests validate all new signal names
-  - [ ] Denied tools test confirms Task is NOT in any stage's denied_tools
+  - [x] `test_returns_pipeline_config` asserts 8 stages with correct names
+  - [x] `test_pipeline_name_and_start_stage` asserts `start_stage="clean_discover"`
+  - [x] Transition tests validate full chain: clean_discover→...→rebase→(end)
+  - [x] Completion status tests validate all new signal names
+  - [x] Denied tools test confirms Task is NOT in any stage's denied_tools
 
 #### [7.2] Update Hook Tests
 - [ ] **7.2.1** Update `build-loop/tests/test_ship_hooks.py` for new sub-stage names: `before_stage("clean_discover")` snapshots HEAD, `before_stage("clean_investigate")` is no-op, `after_stage("clean_execute")` captures `clean_summary`, `after_stage("test_commit")` captures `test_summary`

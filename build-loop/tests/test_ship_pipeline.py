@@ -52,6 +52,14 @@ class TestCreateShipPipeline:
                 f"Stage '{name}' should use PLAN_DENIED_TOOLS"
             )
 
+    def test_task_tool_not_in_any_denied_tools(self):
+        """Failure: Task tool must not be denied in any stage (unblocked in Phase 1)."""
+        config = create_ship_pipeline()
+        for name, stage in config.stages.items():
+            assert "Task" not in stage.denied_tools, (
+                f"Stage '{name}' should not deny Task tool"
+            )
+
 
 class TestShipStageTransitions:
     """Tests for stage transitions forming the full 8-stage chain."""
