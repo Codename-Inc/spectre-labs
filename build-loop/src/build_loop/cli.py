@@ -14,10 +14,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .loop import run_build_loop
-from .notify import notify_build_complete, notify_build_error, notify_plan_complete, notify_ship_complete
+from .notify import notify_build_complete, notify_plan_complete, notify_ship_complete
+from .prompt import reset_progress_file
 
 # Session file location
 SESSION_FILE = ".spectre/build-session.json"
+STATS_FILE = ".spectre/build-stats.json"
 
 # Maximum validation cycles before forcing exit (prevent infinite loops)
 MAX_VALIDATION_CYCLES = 5
@@ -110,6 +112,53 @@ def load_session() -> dict | None:
         return json.loads(session_path.read_text())
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def get_stats_path() -> Path:
+    """Get absolute path to stats file in current working directory."""
+    return Path.cwd() / STATS_FILE
+
+
+def save_stats(stats) -> None:
+    """Persist BuildStats to disk for resume.
+
+    Called after each pipeline stage completes so stats survive
+    interruptions. Uses a separate file from the session so
+    frequent writes don't clobber session data.
+    """
+    stats_path = get_stats_path()
+    stats_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        stats_path.write_text(json.dumps(stats.to_dict(), indent=2))
+    except OSError:
+        pass  # Non-fatal — stats are best-effort
+
+
+def load_stats():
+    """Load previously persisted BuildStats from disk.
+
+    Returns None if no stats file exists or if it's invalid.
+    """
+    from .stats import BuildStats
+
+    stats_path = get_stats_path()
+    if not stats_path.exists():
+        return None
+    try:
+        data = json.loads(stats_path.read_text())
+        return BuildStats.from_dict(data)
+    except (json.JSONDecodeError, OSError, TypeError):
+        return None
+
+
+def clear_stats() -> None:
+    """Remove persisted stats file (called when session completes normally)."""
+    stats_path = get_stats_path()
+    if stats_path.exists():
+        try:
+            stats_path.unlink()
+        except OSError:
+            pass
 
 
 def format_session_summary(session: dict) -> str:
@@ -528,6 +577,11 @@ def run_build_validate_cycle(
     # Single stats instance for the entire build+validate session
     stats = BuildStats()
 
+    # Merge previous stats if resuming
+    previous_stats = load_stats()
+    if previous_stats:
+        stats.merge(previous_stats)
+
     while True:
         cycle += 1
 
@@ -545,6 +599,9 @@ def run_build_validate_cycle(
         )
         total_iterations += iterations
 
+        # Save stats after each build cycle for resume
+        save_stats(stats)
+
         # If build failed, print aggregate summary and exit
         if exit_code != 0:
             stats.print_summary()
@@ -552,6 +609,7 @@ def run_build_validate_cycle(
 
         # If validation not enabled, print summary and we're done
         if not validate:
+            clear_stats()
             stats.print_summary()
             return exit_code, total_iterations
 
@@ -571,6 +629,7 @@ def run_build_validate_cycle(
             print(f"✅ FEATURE COMPLETE after {cycle} build cycle(s)")
             print(f"   Total iterations: {total_iterations}")
             print(f"{'='*60}\n")
+            clear_stats()
             stats.print_summary()
             return 0, total_iterations
 
@@ -579,7 +638,7 @@ def run_build_validate_cycle(
             print(f"\n{'='*60}")
             print(f"⚠️ MAX VALIDATION CYCLES ({MAX_VALIDATION_CYCLES}) REACHED")
             print(f"   Remaining gaps: {gaps_file}")
-            print(f"   Review and run manually if needed")
+            print("   Review and run manually if needed")
             print(f"{'='*60}\n")
             stats.print_summary()
             return 0, total_iterations  # Exit gracefully, not an error
@@ -627,9 +686,12 @@ def run_pipeline(
     else:
         context_str = "None"
 
+    progress_file = str(Path(tasks_file).parent / "build_progress.md")
+    reset_progress_file(progress_file)
+
     context = {
         "tasks_file_path": tasks_file,
-        "progress_file_path": str(Path(tasks_file).parent / "build_progress.md"),
+        "progress_file_path": progress_file,
         "additional_context_paths_or_none": context_str,
     }
 
@@ -641,6 +703,12 @@ def run_pipeline(
 
     # Create and run executor
     stats = BuildStats()
+
+    # Merge previous stats if resuming
+    previous_stats = load_stats()
+    if previous_stats:
+        stats.merge(previous_stats)
+
     executor = PipelineExecutor(
         config=config,
         runner=runner,
@@ -648,6 +716,12 @@ def run_pipeline(
     )
 
     state = executor.run(stats)
+
+    # Persist/clear stats based on outcome
+    if state.status == PipelineStatus.COMPLETED:
+        clear_stats()
+    else:
+        save_stats(stats)
 
     # Return based on pipeline status
     if state.status == PipelineStatus.COMPLETED:
@@ -697,9 +771,12 @@ def run_default_pipeline(
     else:
         context_str = "None"
 
+    progress_file = str(Path(tasks_file).parent / "build_progress.md")
+    reset_progress_file(progress_file)
+
     context = {
         "tasks_file_path": tasks_file,
-        "progress_file_path": str(Path(tasks_file).parent / "build_progress.md"),
+        "progress_file_path": progress_file,
         "additional_context_paths_or_none": context_str,
         "review_fixes_path": str(Path(tasks_file).parent / "review_fixes.md"),
         "changed_files": "No files changed (first run)",
@@ -721,6 +798,11 @@ def run_default_pipeline(
     # Stats with event-based loop counting
     stats = BuildStats()
 
+    # Merge previous stats if resuming
+    previous_stats = load_stats()
+    if previous_stats:
+        stats.merge(previous_stats)
+
     def on_event(event):
         if isinstance(event, StageCompletedEvent):
             if event.stage == "build":
@@ -729,6 +811,8 @@ def run_default_pipeline(
                 stats.review_loops += 1
             elif event.stage == "validate":
                 stats.validate_loops += 1
+            # Persist stats at each stage boundary for resume
+            save_stats(stats)
 
     # Create and run executor with hooks
     executor = PipelineExecutor(
@@ -741,6 +825,12 @@ def run_default_pipeline(
     )
 
     state = executor.run(stats)
+
+    # Clear persisted stats on successful completion
+    if state.status == PipelineStatus.COMPLETED:
+        clear_stats()
+    else:
+        save_stats(stats)
 
     # Return based on pipeline status
     if state.status == PipelineStatus.COMPLETED:
@@ -847,7 +937,20 @@ def run_plan_pipeline(
 
     # Stats with event-based loop counting
     stats = BuildStats()
-    on_event = create_plan_event_handler(stats)
+
+    # Merge previous stats if resuming
+    previous_stats = load_stats()
+    if previous_stats:
+        stats.merge(previous_stats)
+
+    _plan_on_event = create_plan_event_handler(stats)
+
+    def on_event(event):
+        _plan_on_event(event)
+        # Persist stats at each stage boundary for resume
+        from .pipeline.executor import StageCompletedEvent
+        if isinstance(event, StageCompletedEvent):
+            save_stats(stats)
 
     # Create and run executor with planning hooks
     executor = PipelineExecutor(
@@ -875,7 +978,7 @@ def run_plan_pipeline(
         print(f"\n{'='*60}")
         print("📋 CLARIFICATIONS NEEDED")
         print(f"   Edit: {clarif_path}")
-        print(f"   Then: spectre-build resume")
+        print("   Then: spectre-build resume")
         print(f"{'='*60}\n")
 
         notify(
@@ -896,6 +999,8 @@ def run_plan_pipeline(
             plan_scope_name=scope_name or derive_scope_slug(context_files),
         )
 
+        # Save stats for resume (clarifications pause, not final)
+        save_stats(stats)
         return 0, state.total_iterations, ""
 
     # Pipeline completed normally
@@ -914,10 +1019,13 @@ def run_plan_pipeline(
         print(f"{'='*60}\n")
 
     if state.status == PipelineStatus.COMPLETED:
+        clear_stats()
         return 0, state.total_iterations, manifest_path
     elif state.status == PipelineStatus.STOPPED:
+        save_stats(stats)
         return 130, state.total_iterations, ""
     else:
+        save_stats(stats)
         return 1, state.total_iterations, ""
 
 
@@ -941,16 +1049,11 @@ def run_ship_pipeline(
     Returns:
         Tuple of (exit_code, total_iterations_completed)
     """
-    import logging
-    import subprocess as _subprocess
-
     from .agent import get_agent
     from .hooks import ship_after_stage, ship_before_stage
     from .pipeline.executor import PipelineExecutor, PipelineStatus
     from .pipeline.loader import create_ship_pipeline
     from .stats import BuildStats, create_ship_event_handler
-
-    logger = logging.getLogger(__name__)
 
     # Get agent runner
     runner = get_agent(agent)
@@ -991,7 +1094,20 @@ def run_ship_pipeline(
 
     # Stats with event-based loop counting
     stats = BuildStats()
-    on_event = create_ship_event_handler(stats)
+
+    # Merge previous stats if resuming
+    previous_stats = load_stats()
+    if previous_stats:
+        stats.merge(previous_stats)
+
+    _ship_on_event = create_ship_event_handler(stats)
+
+    def on_event(event):
+        _ship_on_event(event)
+        # Persist stats at each stage boundary for resume
+        from .pipeline.executor import StageCompletedEvent
+        if isinstance(event, StageCompletedEvent):
+            save_stats(stats)
 
     # Create and run executor with ship hooks
     executor = PipelineExecutor(
@@ -1004,6 +1120,12 @@ def run_ship_pipeline(
     )
 
     state = executor.run(stats)
+
+    # Persist/clear stats based on outcome
+    if state.status == PipelineStatus.COMPLETED:
+        clear_stats()
+    else:
+        save_stats(stats)
 
     # Return based on pipeline status
     if state.status == PipelineStatus.COMPLETED:
@@ -1282,9 +1404,9 @@ def run_serve(args: argparse.Namespace) -> None:
         print("Error: uvicorn not installed. Run: pip install uvicorn[standard]", file=sys.stderr)
         sys.exit(1)
 
-    print(f"\n🚀 Starting Spectre Build GUI")
+    print("\n🚀 Starting Spectre Build GUI")
     print(f"   URL: http://{args.host}:{args.port}")
-    print(f"   Press Ctrl+C to stop\n")
+    print("   Press Ctrl+C to stop\n")
 
     uvicorn.run(
         "build_loop.server.app:app",

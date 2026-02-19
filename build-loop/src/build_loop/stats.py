@@ -4,20 +4,23 @@ Build statistics tracking.
 Tracks token usage, tool calls, and timing across build iterations.
 """
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+logger = logging.getLogger(__name__)
 
 
 # Pricing per 1M tokens (USD) by model family
 # Source: https://docs.anthropic.com/en/docs/about-claude/models
+# Updated 2026-02-18 for Opus 4.5+/Sonnet 4.5+/Haiku 4.5 pricing
 _MODEL_PRICING: dict[str, dict[str, float]] = {
     "opus": {
-        "input": 15.0,
-        "output": 75.0,
-        "cache_read": 1.50,
-        "cache_write": 18.75,
+        "input": 5.0,
+        "output": 25.0,
+        "cache_read": 0.50,
+        "cache_write": 6.25,
     },
     "sonnet": {
         "input": 3.0,
@@ -26,10 +29,10 @@ _MODEL_PRICING: dict[str, dict[str, float]] = {
         "cache_write": 3.75,
     },
     "haiku": {
-        "input": 0.80,
-        "output": 4.0,
-        "cache_read": 0.08,
-        "cache_write": 1.0,
+        "input": 1.0,
+        "output": 5.0,
+        "cache_read": 0.10,
+        "cache_write": 1.25,
     },
 }
 
@@ -63,6 +66,77 @@ class BuildStats:
     validate_loops: int = 0
     plan_loops: int = 0
     ship_loops: int = 0
+
+    def to_dict(self) -> dict:
+        """Serialize stats to a JSON-compatible dict for session persistence."""
+        return {
+            "start_time": self.start_time,
+            "iterations_completed": self.iterations_completed,
+            "iterations_failed": self.iterations_failed,
+            "total_input_tokens": self.total_input_tokens,
+            "total_output_tokens": self.total_output_tokens,
+            "total_cache_read_tokens": self.total_cache_read_tokens,
+            "total_cache_write_tokens": self.total_cache_write_tokens,
+            "total_cost_usd": self.total_cost_usd,
+            "total_api_turns": self.total_api_turns,
+            "model": self.model,
+            "tool_calls": dict(self.tool_calls),
+            "build_loops": self.build_loops,
+            "review_loops": self.review_loops,
+            "validate_loops": self.validate_loops,
+            "plan_loops": self.plan_loops,
+            "ship_loops": self.ship_loops,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "BuildStats":
+        """Restore stats from a persisted dict.
+
+        Unknown keys are ignored for forward compatibility.
+        """
+        stats = cls()
+        stats.start_time = data.get("start_time", stats.start_time)
+        stats.iterations_completed = data.get("iterations_completed", 0)
+        stats.iterations_failed = data.get("iterations_failed", 0)
+        stats.total_input_tokens = data.get("total_input_tokens", 0)
+        stats.total_output_tokens = data.get("total_output_tokens", 0)
+        stats.total_cache_read_tokens = data.get("total_cache_read_tokens", 0)
+        stats.total_cache_write_tokens = data.get("total_cache_write_tokens", 0)
+        stats.total_cost_usd = data.get("total_cost_usd", 0.0)
+        stats.total_api_turns = data.get("total_api_turns", 0)
+        stats.model = data.get("model", "")
+        stats.tool_calls = dict(data.get("tool_calls", {}))
+        stats.build_loops = data.get("build_loops", 0)
+        stats.review_loops = data.get("review_loops", 0)
+        stats.validate_loops = data.get("validate_loops", 0)
+        stats.plan_loops = data.get("plan_loops", 0)
+        stats.ship_loops = data.get("ship_loops", 0)
+        return stats
+
+    def merge(self, other: "BuildStats") -> None:
+        """Merge another BuildStats into this one (for resume accumulation).
+
+        Keeps the earlier start_time so elapsed time spans both sessions.
+        Accumulates all counters. Takes the latest model string.
+        """
+        self.start_time = min(self.start_time, other.start_time)
+        self.iterations_completed += other.iterations_completed
+        self.iterations_failed += other.iterations_failed
+        self.total_input_tokens += other.total_input_tokens
+        self.total_output_tokens += other.total_output_tokens
+        self.total_cache_read_tokens += other.total_cache_read_tokens
+        self.total_cache_write_tokens += other.total_cache_write_tokens
+        self.total_cost_usd += other.total_cost_usd
+        self.total_api_turns += other.total_api_turns
+        if other.model:
+            self.model = other.model
+        for tool, count in other.tool_calls.items():
+            self.tool_calls[tool] = self.tool_calls.get(tool, 0) + count
+        self.build_loops += other.build_loops
+        self.review_loops += other.review_loops
+        self.validate_loops += other.validate_loops
+        self.plan_loops += other.plan_loops
+        self.ship_loops += other.ship_loops
 
     def add_usage(self, usage: dict) -> None:
         """Add token usage from a result event."""
@@ -182,6 +256,17 @@ class BuildStats:
         calculated_cost = self.calculate_cost()
         cost = calculated_cost if calculated_cost > 0 else self.total_cost_usd
         cost_str = self._format_cost(cost)
+
+        # [🪳 TEMP STATS] Log cost decision and token breakdown
+        logger.info(
+            "[🪳 TEMP STATS] summary: model=%s calculated_cost=%.4f "
+            "result_event_cost=%.4f using=%s "
+            "input=%d output=%d cache_read=%d cache_write=%d",
+            self.model, calculated_cost, self.total_cost_usd,
+            "calculated" if calculated_cost > 0 else "result_event",
+            self.total_input_tokens, self.total_output_tokens,
+            self.total_cache_read_tokens, self.total_cache_write_tokens,
+        )
 
         # Format turns line (only show if we have turn data)
         turns_str = str(self.total_api_turns) if self.total_api_turns > 0 else "—"

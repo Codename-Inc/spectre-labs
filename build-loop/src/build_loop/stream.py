@@ -4,7 +4,11 @@ Stream-JSON parsing and formatting for Claude output.
 Handles real-time parsing and display of stream-json events from Claude CLI.
 """
 
+import logging
+
 from .stats import BuildStats
+
+logger = logging.getLogger(__name__)
 
 
 def format_tool_call(name: str, input_data: dict) -> str:
@@ -96,13 +100,50 @@ def process_stream_event(
     elif event_type == "result":
         # Result event fires once at end of session with authoritative
         # totals for all API turns in this iteration
-        if stats and "usage" in event:
-            stats.add_usage(event["usage"])
+
+        # [🪳 TEMP STATS] Log full result event to diagnose token counting
+        usage = event.get("usage", {})
+        logger.info(
+            "[🪳 TEMP STATS] result event: usage_keys=%s usage=%s "
+            "total_cost_usd=%s num_turns=%s",
+            list(usage.keys()),
+            {k: v for k, v in usage.items() if isinstance(v, (int, float))},
+            event.get("total_cost_usd"),
+            event.get("num_turns"),
+        )
+        if stats:
+            # [🪳 TEMP STATS] Log pre-update state
+            logger.info(
+                "[🪳 TEMP STATS] pre-update: input=%d output=%d "
+                "cache_read=%d cache_write=%d cost_usd=%.4f",
+                stats.total_input_tokens,
+                stats.total_output_tokens,
+                stats.total_cache_read_tokens,
+                stats.total_cache_write_tokens,
+                stats.total_cost_usd,
+            )
+
+        if stats and usage:
+            stats.add_usage(usage)
         # Capture cost if available
         if stats and "total_cost_usd" in event:
             stats.total_cost_usd += event["total_cost_usd"]
         # Capture API turn count if available
         if stats and "num_turns" in event:
             stats.total_api_turns += event["num_turns"]
+
+        if stats:
+            # [🪳 TEMP STATS] Log post-update state
+            logger.info(
+                "[🪳 TEMP STATS] post-update: input=%d output=%d "
+                "cache_read=%d cache_write=%d cost_usd=%.4f "
+                "calculated_cost=%.4f",
+                stats.total_input_tokens,
+                stats.total_output_tokens,
+                stats.total_cache_read_tokens,
+                stats.total_cache_write_tokens,
+                stats.total_cost_usd,
+                stats.calculate_cost(),
+            )
 
     # Skip user and tool_result events (too noisy)

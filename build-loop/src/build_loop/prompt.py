@@ -5,7 +5,10 @@ The prompt is loaded from an external markdown file for easy iteration.
 Only file paths are substituted at runtime.
 """
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def _get_prompt_path() -> Path:
@@ -29,6 +32,44 @@ def _load_prompt_template() -> str:
             "Expected file: cli/build/prompts/build.md"
         )
     return prompt_path.read_text(encoding="utf-8")
+
+
+def reset_progress_file(progress_path: str) -> None:
+    """Reset a build progress file, keeping only the Codebase Patterns section.
+
+    On subsequent builds in the same workspace, iteration logs bloat the context
+    window. This trims everything below the '---' separator after Codebase Patterns,
+    preserving discovered patterns while starting fresh for new iteration logs.
+
+    If the file doesn't exist, this is a no-op.
+    """
+    path = Path(progress_path)
+    if not path.is_file():
+        return
+
+    content = path.read_text(encoding="utf-8")
+
+    # Find the '---' separator that ends the Codebase Patterns section
+    # The expected structure is:
+    #   # Build Progress
+    #   ## Codebase Patterns
+    #   ...patterns...
+    #   ---
+    #   ## Iteration — ...
+    separator = "\n---\n"
+    sep_idx = content.find(separator)
+    if sep_idx == -1:
+        # No separator found — file may be malformed or empty of iterations
+        return
+
+    # Keep everything up to and including the separator
+    trimmed = content[:sep_idx + len(separator)]
+
+    # Only write if we actually trimmed something
+    after_separator = content[sep_idx + len(separator):].strip()
+    if after_separator:
+        path.write_text(trimmed, encoding="utf-8")
+        logger.info("Reset progress file: kept Codebase Patterns, trimmed iteration logs")
 
 
 def build_prompt(tasks_file: str, context_files: list[str]) -> str:

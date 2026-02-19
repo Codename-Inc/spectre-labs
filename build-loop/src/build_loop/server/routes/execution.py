@@ -4,7 +4,6 @@ Pipeline execution control endpoints.
 Provides REST API for starting, stopping, and monitoring pipeline execution.
 """
 
-import asyncio
 import logging
 import threading
 from dataclasses import asdict
@@ -16,11 +15,10 @@ from pydantic import BaseModel
 
 from ...agent import get_agent
 from ...pipeline import load_pipeline
+from ...prompt import reset_progress_file
 from ...pipeline.executor import (
     PipelineEvent,
     PipelineExecutor,
-    PipelineState,
-    PipelineStatus,
 )
 from ...stats import BuildStats
 
@@ -121,9 +119,12 @@ def _run_pipeline(
         else:
             context_str = "None"
 
+        progress_file = str(Path(tasks_file).parent / "build_progress.md")
+        reset_progress_file(progress_file)
+
         context = {
             "tasks_file_path": tasks_file,
-            "progress_file_path": str(Path(tasks_file).parent / "build_progress.md"),
+            "progress_file_path": progress_file,
             "additional_context_paths_or_none": context_str,
         }
 
