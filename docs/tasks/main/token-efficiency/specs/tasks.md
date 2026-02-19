@@ -130,22 +130,22 @@ Replace per-task fresh-session build model with phase owners that dispatch paral
 
 ### Phase 3: Integration Verification
 
-#### [3.1] Verify hooks and artifact propagation
-- [ ] **3.1.1** Trace the artifact flow from phase owner → code review to verify `phase_task_descriptions` and `files_touched` propagate correctly. The build stage's `PromiseCompletion(extract_artifacts=True)` extracts JSON fields, then `executor.py:275` calls `context.update(result.artifacts)` which makes them available to the code review prompt. Verify no hook changes are needed for this path
+#### [x] [3.1] Verify hooks and artifact propagation
+- [x] **3.1.1** Trace the artifact flow from phase owner → code review to verify `phase_task_descriptions` and `files_touched` propagate correctly. The build stage's `PromiseCompletion(extract_artifacts=True)` extracts JSON fields, then `executor.py:275` calls `context.update(result.artifacts)` which makes them available to the code review prompt. Verify no hook changes are needed for this path
   - **Produces**: Confirmed or updated artifact propagation path
   - **Consumed by**: Code review prompt variable substitution
   - **Replaces**: N/A (verification task)
-  - [ ] `phase_task_descriptions` value available in context when code_review.md template is built
-  - [ ] `files_touched` value available in context (supplementary to git diff `changed_files`)
-  - [ ] Git diff hooks (`after_stage_hook`) still capture subagent commits correctly
+  - [x] `phase_task_descriptions` value available in context when code_review.md template is built
+  - [x] `files_touched` value available in context (supplementary to git diff `changed_files`)
+  - [x] Git diff hooks (`after_stage_hook`) still capture subagent commits correctly
 
-- [ ] **3.1.2** Verify that `after_stage_hook("build")` works correctly when the build stage contains parallel subagent commits. The hook snapshots HEAD before the phase owner starts and collects diff after. Since subagents commit during the phase owner's session, the diff should capture all subagent work
+- [x] **3.1.2** Verify that `after_stage_hook("build")` works correctly when the build stage contains parallel subagent commits. The hook snapshots HEAD before the phase owner starts and collects diff after. Since subagents commit during the phase owner's session, the diff should capture all subagent work
   - **Produces**: Confirmed git hook behavior with parallel subagent commits
   - **Consumed by**: Code review receives `{changed_files}` and `{commit_messages}` from hooks
   - **Replaces**: N/A (verification task)
-  - [ ] `snapshot_head()` captures correct commit before phase owner starts
-  - [ ] `collect_diff()` returns all files changed by all subagents in the phase
-  - [ ] `format_commits()` returns all subagent commit messages
+  - [x] `snapshot_head()` captures correct commit before phase owner starts
+  - [x] `collect_diff()` returns all files changed by all subagents in the phase
+  - [x] `format_commits()` returns all subagent commit messages
 
 #### [3.2] End-to-end dry run test
 - [ ] **3.2.1** Create a small test tasks file with 2 phases, 2-3 tasks each, with wave structure defined. Run a build with the phase owner prompt to verify: phase owner reads context once, dispatches subagents per wave, subagents complete and return reports, phase owner aggregates and emits PHASE_COMPLETE
