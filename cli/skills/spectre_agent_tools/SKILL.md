@@ -251,7 +251,7 @@ spectre command show /command-name
 ## Prerequisites
 
 - Python 3.10+
-- Spectre CLI: `pip install -e /path/to/spectre` (or from PyPI when published)
+- Spectre CLI: install from a trusted local checkout with `python -m pip install -e /path/to/spectre-labs/cli`
 - Verify: `spectre --version`
 
 Agent files discovered from:
@@ -272,4 +272,4 @@ Command files discovered from:
 
 **Command not found**: Run `spectre command list`, suggest similar names
 
-**Spectre not installed**: Tell user to run `pip install spectre-cli`
+**Spectre not installed**: Tell user to install from a trusted local checkout with `python -m pip install -e /path/to/spectre-labs/cli`
